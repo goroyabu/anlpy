@@ -10,7 +10,7 @@ from distutils.version import LooseVersion
 
 
 class CMakeExtension(Extension):
-    def __init__(self, name, sourcedir=''):
+    def __init__(self, name, sourcedir='source'):
         Extension.__init__(self, name, sources=[])
         self.sourcedir = os.path.abspath(sourcedir)
 
