@@ -10,7 +10,7 @@ from distutils.version import LooseVersion
 
 
 class CMakeExtension(Extension):
-    def __init__(self, name, sourcedir='src'):
+    def __init__(self, name, sourcedir='.'):
         Extension.__init__(self, name, sources=[])
         self.sourcedir = os.path.abspath(sourcedir)
 
@@ -59,13 +59,13 @@ class CMakeBuild(build_ext):
         subprocess.check_call(['cmake', '--install', '.'], cwd=self.build_temp)
 
 setup(
-    name='anlpy',
-    version='0.0.0',
+    name='anltest',
+    version='0.0.1',
     author='Goro Yabu',
-    author_email='goto.yabu@gmail.com',
-    description='Analysis Framework using python',
+    author_email='goro.yabu@gmail.com',
+    description='Example package of ANLpy',
     long_description='',
-    ext_modules=[CMakeExtension('anlpy')],
+    ext_modules=[CMakeExtension('anltest')],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
 )
