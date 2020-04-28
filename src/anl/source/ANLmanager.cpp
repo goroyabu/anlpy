@@ -18,10 +18,13 @@ using std::right;
 using std::left;
 using std::setw;
 
+anl::ANLmoduleStacker* anl::ANLmanager::module_stacker;
+
 anl::ANLmanager::ANLmanager()
     : VANL_Module( "ANLmanager", "1.0" )
 {
-    module_stacker = new ANLmoduleStacker();
+    if ( !module_stacker )
+	module_stacker = new ANLmoduleStacker();
     define_parameter<std::string>( "program_name", "ANL" );
     define_parameter<int>( "display_interval_msec", 1000000.0 );
 }
@@ -66,6 +69,8 @@ int anl::ANLmanager::read_data(long int nevent, long int print_freq)
     // auto usleep_time = std::chrono::microseconds( msec );    
 
     bnk::init();
+    bnk::define<long>("ANL_eventid");
+    bnk::put<long>("ANL_eventid", 0);
     // bnk::define<std::string>("ANLmanager::program_name");
     // auto program_name = get_parameter<std::string>("program_name");
     // bnk::put<std::string>("ANLmanager::program_name", program_name);
@@ -80,10 +85,11 @@ int anl::ANLmanager::read_data(long int nevent, long int print_freq)
     auto status       = ANL_OK;
     bool run_has_quit = false;
 
-    long ievent = 0;
-    while ( ievent < nevent ) {
-	++ievent;
-
+    long ievent = -1;
+    while ( ++ievent < nevent ) {
+	//++ievent;
+	bnk::put<long>("ANL_eventid", ievent);
+	
 	if ( ievent%print_freq == 0 ) {
 	    cout << ievent << "/" << nevent;
 	    cout << "(" << (double)ievent/nevent*100.0 << "%)" << endl;
@@ -93,15 +99,15 @@ int anl::ANLmanager::read_data(long int nevent, long int print_freq)
 	bool event_is_discarded  = false;
 	
 	for ( int imodule=0; imodule<nmodules; ++imodule ) {	    
-
+	    
 	    auto module = module_stacker->get(imodule);	    
 	    status = module->mod_ana();
 
 	    auto status_count = module_stacker->status_count(imodule);
 	    status_count->entry++;
 	    
-	    if ( status == ANL_OK ) continue;
-	    else if( status == ANL_QUIT ) 
+	    // if ( status == ANL_OK ) continue;
+	    if( status == ANL_QUIT ) 
 		status = ANL_ENDLOOP + ANL_DISCARD + ANL_NOCOUNT;	    
 	    else if ( status == ANL_SKIP )
 		status = ANL_DISCARD;
@@ -225,6 +231,11 @@ int anl::ANLmanager::reset_status()
     evs::reset_all();
     return ANL_OK;
 }
+anl::VANL_Module* anl::ANLmanager::get_module(const std::string& key)
+{
+    return module_stacker->get(key);
+}
+
 int anl::ANLmanager::call_init_and_his()
 {
     auto status = ANL_OK;

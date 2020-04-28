@@ -58,7 +58,13 @@ namespace bnk
     template<typename T> std::vector<T> getv(const std::string key, int begin=0, int end=-1);
     
     template<typename T> T*  getptr(const std::string key);
+    template<typename T> std::vector<T>* getvecptr(const std::string& key);
     template<typename T> int resize(const std::string key, const int size=0);
+    template<typename T> std::string getkeytosize(const std::string& key);
+    template<typename T> int setkeytosize(const std::string& key, const std::string& key_to_size);
+
+    template<typename T> std::vector<std::string> getbufferlist();
+    std::vector<std::pair<std::string, std::string>> get_list_of_buffers();
     
     int net_update(const int index);
 

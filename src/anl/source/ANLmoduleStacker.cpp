@@ -102,12 +102,12 @@ void anl::ANLmoduleStacker::reset_status()
 
 bool anl::ANLmoduleStacker::is_module_def(const std::string& key)
 {
-    if ( module_index_table.find(key) == module_index_table.end() )
-	return false;
+    if ( module_index_table.find(key) == module_index_table.end() ) 
+	return false;    
     return true;
 }
 int anl::ANLmoduleStacker::find_module(const std::string& key)
 {
-    if ( is_module_def(key) ) return -1;
+    if ( !is_module_def(key) ) return -1;
     return module_index_table[ key ];
 }

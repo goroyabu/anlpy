@@ -44,9 +44,11 @@ namespace anl {
 	/** @brief Optional. Call before a next analysis **/
 	int reset_status();
 
+	VANL_Module* get_module(const std::string& key);
+	
     private:
 
-	ANLmoduleStacker* module_stacker;       
+	static ANLmoduleStacker* module_stacker;       
 
 	/** @brief Called at the beginning of read_data **/
 	int call_init_and_his();
