@@ -91,7 +91,8 @@ int ReadTTree::mod_bgnrun()
 int ReadTTree::mod_ana()
 {
     auto tree_entry = bnk::get<long>( "ReadTTree_entry" ) + 1;
-    if ( tree_entry >= nentries ) return anl::ANL_QUIT;
+    // if ( tree_entry >= nentries ) return anl::ANL_QUIT;
+    if ( tree_entry >= nentries ) return anl::ANL_LOOP;
     
     input_tree->GetEntry( tree_entry );
     bnk::put<long>( "ReadTTree_entry", tree_entry ); return anl::ANL_OK;

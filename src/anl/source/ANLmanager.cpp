@@ -84,9 +84,10 @@ int anl::ANLmanager::read_data(long int nevent, long int print_freq)
 
     auto status       = ANL_OK;
     bool run_has_quit = false;
+    bool run_broke = false;
 
     long ievent = -1;
-    while ( ++ievent < nevent ) {
+    while ( ++ievent<nevent && run_broke==false ) {
 	//++ievent;
 	bnk::put<long>("ANL_eventid", ievent);
 	
@@ -112,7 +113,8 @@ int anl::ANLmanager::read_data(long int nevent, long int print_freq)
 	    else if ( status == ANL_SKIP )
 		status = ANL_DISCARD;
 	    else if ( status == ANL_LOOP )
-		status = ANL_NEWROOT;
+		status = ANL_ENDLOOP + ANL_DISCARD + ANL_NOCOUNT + ANL_NEWROOT;
+		// status = ANL_NEWROOT;
 
 	    if ( status & ANL_NOCOUNT )
 		event_has_evs_count = false;
@@ -120,6 +122,9 @@ int anl::ANLmanager::read_data(long int nevent, long int print_freq)
 	    // if ( status & ANL_ENDLOOP ) {
 	    // 	nest_level = 0; n_rest_events = ievent;
 	    // }
+
+	    if ( status & ANL_NEWROOT )
+		run_broke = true;
 	    
 	    if ( status & ANL_DISCARD ) {
 		if( status & ANL_ENDLOOP ) {
