@@ -63,7 +63,7 @@ int analysis(std::string input_file_name)
     auto output_file_name = input_file_name;
     auto pos_ext = output_file_name.find(".root");
     auto len_ext = 5;
-    output_file_name.replace(pos_ext, pos_ext+len_ext, "_hitttree.root");
+    output_file_name.replace(pos_ext, pos_ext+len_ext, "_hittree.root");
     
     auto write = new WriteTTree();
     write->set_parameter<std::string>("file_name", output_file_name);
