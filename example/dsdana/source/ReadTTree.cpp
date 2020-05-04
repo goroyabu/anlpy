@@ -33,7 +33,9 @@ ReadTTree::ReadTTree()
     define_parameter<std::string>("tree_name", "eventtree");
     define_parameter<std::string>("branch_select", "ALL");
     define_parameter<std::string>("branch_ignore", "NONE");
-    
+
+    const static int reserved_size_of_string_branch = 1000;
+    string_to_reset = std::string(reserved_size_of_string_branch, '\0');
     // dp = 0;
     // pos_x = nullptr;
     // pos_y = nullptr;
@@ -93,8 +95,13 @@ int ReadTTree::mod_ana()
     auto tree_entry = bnk::get<long>( "ReadTTree_entry" ) + 1;
     // if ( tree_entry >= nentries ) return anl::ANL_QUIT;
     if ( tree_entry >= nentries ) return anl::ANL_LOOP;
-    
+
+    for ( auto key : list_of_string_brances )
+	bnk::put<std::string>( key, string_to_reset );
+	
     input_tree->GetEntry( tree_entry );
+    
+    // cout << bnk::get<std::string>("proc_name") << endl;
     bnk::put<long>( "ReadTTree_entry", tree_entry ); return anl::ANL_OK;
     
     // return 
@@ -228,6 +235,19 @@ int ReadTTree::read_all_branch()
 	else if ( typestring == "Long64_t" ) {
 	    status = read_branch<long long>( key, maxsize, leafcount );
 	    print_branch_info(key, "long long", maxsize);
+	}
+	else if ( typestring == "Char_t" ) {
+	    bnk::define<std::string>(key);
+	    bnk::put<std::string>( key, string_to_reset );
+	    
+	    if( !input_tree->FindBranch(key.c_str()) ) {
+		status = anl::ANL_NG; continue;
+	    }
+	    input_tree->SetBranchAddress
+		(key.c_str(), (*bnk::getvecptr<std::string>(key))[0].data() );
+	    list_of_string_brances.emplace_back( key );
+
+	    print_branch_info(key, "string", maxsize );
 	}
 	else if ( typestring == "vector<int>" ) {
 	    status = read_vint_branch( key );

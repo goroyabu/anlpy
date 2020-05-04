@@ -68,7 +68,7 @@ int analysis(std::string input_file_name)
     auto write = new WriteTTree();
     write->set_parameter<std::string>("file_name", output_file_name);
     write->set_parameter<std::string>("tree_name", "hittree");
-    write->set_parameter<std::string>("branch_ignore", "adc*:cmn*:index*:hitnum*:{live,unix}time");
+    write->set_parameter<std::string>("branch_ignore", "adc*:cmn*:index*:hitnum*");
     manager->add_module(write);
     
     manager->show_analysis();

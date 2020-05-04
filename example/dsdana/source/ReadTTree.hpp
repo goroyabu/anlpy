@@ -44,11 +44,15 @@ protected:
     int read_all_branch();
     int get_maxsize(TLeaf* leaf);
     std::string get_leafcount(TLeaf* leaf);
-    
+
+    /* For string branches */
+    std::vector< std::string > list_of_string_brances;
+    std::string string_to_reset;
+
+    /* For std::vector branches */
     std::map< std::string, std::vector<int>* > vptr_list_int;
     std::map< std::string, std::vector<float>* > vptr_list_float;
     std::map< std::string, std::vector<double>* > vptr_list_double;
-
     int read_vint_branch(const std::string& key);
     int read_vfloat_branch(const std::string& key);
     int read_vdouble_branch(const std::string& key);

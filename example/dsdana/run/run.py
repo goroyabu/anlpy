@@ -4,22 +4,20 @@ import anlpy
 import dsdana
 
 if __name__ == '__main__':
+
     anl = anlpy.ANLmanager()
 
-    tmpReadTTree = dsdana.ReadTTree()
-    #tmpReadTTree.SetParameter("file_name", " /Users/goroyabu/github/sim4-w-strip/test/sim_20200329_214825.root")
-    #tmpReadTTree.SetParameter("tree_name", "tree")
-    tmpReadTTree.SetParameter("file_name", "example_data_cc.root")
-    tmpReadTTree.SetParameter("tree_name", "eventtree")
-    tmpReadTTree.SetParameter("branch_ignore", "chflag*:cmn*_ex:ref*")
+    tmpReadTTree = dsdana.ReadTTree()\
+        .SetParameter("file_name", "example_data_cc.root")\
+        .SetParameter("tree_name", "eventtree")\
+        .SetParameter("branch_ignore", "chflag*:cmn*_ex:ref*")
     anl.AddModule(tmpReadTTree)
 
-    tmpDSDdatabase = dsdana.DSDdatabase()
-    tmpDSDdatabase.SetParameter("file_name", "database.txt")
+    tmpDSDdatabase = dsdana.DSDdatabase()\
+        .SetParameter("file_name", "database.txt")
     anl.AddModule(tmpDSDdatabase)
 
     tmpApplyDatabase = dsdana.ApplyDatabase()
-    # tmpApplyDatabase
     anl.AddModule(tmpApplyDatabase)
 
     tmpMergeAdjacent = dsdana.MergeAdjacent()
@@ -28,12 +26,13 @@ if __name__ == '__main__':
     tmpCoupleHit = dsdana.CoupleHit()
     anl.AddModule(tmpCoupleHit)
 
-    tmpWriteTTree = dsdana.WriteTTree()
-    tmpWriteTTree.SetParameter("tree_name", "tree")
-    tmpWriteTTree.SetParameter("branch_ignore", "adc*:cmn*:index*:hitnum*:{live,unix}time")
+    tmpWriteTTree = dsdana.WriteTTree()\
+        .SetParameter("file_name", "example_output.root")\
+        .SetParameter("tree_name", "hittree")\
+        .SetParameter("branch_ignore", "adc*:cmn*:index*:hitnum*")
     anl.AddModule(tmpWriteTTree)
 
     anl.ShowAnalysis()
-    anl.ReadData(10000, 1000)
+    anl.ReadData(10000000, 1000)
 
     print("Test run of dsdana is succeeded !")

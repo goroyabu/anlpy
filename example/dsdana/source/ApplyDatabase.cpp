@@ -83,15 +83,19 @@ int ApplyDatabase::mod_bgnrun()
     bnk::define<int>("detid_y_lv1", nyside);
     bnk::define<int>("stripid_x_lv1", nxside);
     bnk::define<int>("stripid_y_lv1", nyside);
+    bnk::define<int>("adc_cmn_x_lv2", nxside);
+    bnk::define<int>("adc_cmn_y_lv2", nyside);
     bnk::define<float>("epi_x_lv1", nxside);
     bnk::define<float>("epi_y_lv1", nyside);
 
     bnk::setkeytosize<int>("detid_x_lv1", "nsignal_x_lv1");
     bnk::setkeytosize<int>("stripid_x_lv1", "nsignal_x_lv1");
+    bnk::setkeytosize<int>("adc_cmn_x_lv2", "nsignal_x_lv1");
     bnk::setkeytosize<float>("epi_x_lv1", "nsignal_x_lv1");
 
     bnk::setkeytosize<int>("detid_y_lv1", "nsignal_y_lv1");
     bnk::setkeytosize<int>("stripid_y_lv1", "nsignal_y_lv1");
+    bnk::setkeytosize<int>("adc_cmn_y_lv2", "nsignal_y_lv1");
     bnk::setkeytosize<float>("epi_y_lv1", "nsignal_y_lv1");
     
     evs::define("nsignal_x_lv1==0 && nsignal_y_lv1==0");
@@ -161,14 +165,15 @@ int ApplyDatabase::mod_ana()
 	    if ( mvec_index[asicid].size()<=isignal ) continue;
 	    
 	    int asicch = mvec_index[asicid][isignal];
-	    float pha = mvec_adc[asicid][isignal] - mvec_cmn[asicid] + getRandom();
+	    // float pha = mvec_adc[asicid][isignal] - mvec_cmn[asicid] + getRandom();
+	    float pha = mvec_adc[asicid][isignal] - mvec_cmn[asicid];
 	    
 	    auto [detid, stripid] = mDatabase->FindStrip(asicid, asicch);
 
 	    if( detid == -1 && stripid == -1 ) continue;		
 	    if( mDatabase->IsBadch(stripid) ) continue;
 	    
-	    float epi = mDatabase->GetEPI(stripid, pha);
+	    float epi = mDatabase->GetEPI(stripid, pha+getRandom());
 
 	    m_histall->Fill(stripid, pha);
 	    m_spectall->Fill(stripid, epi);
@@ -176,12 +181,14 @@ int ApplyDatabase::mod_ana()
 	    if ( mDatabase->IsXside(stripid) ) {
 		m_detid_x_lv1.emplace_back(detid);
 		m_stripid_x_lv1.emplace_back(stripid);
+		m_adc_cmn_x_lv1.emplace_back(pha);
 		m_epi_x_lv1.emplace_back(epi);
 		m_nsignal_x_lv1++;
 	    }
 	    else {
 		m_detid_y_lv1.emplace_back(detid);
 		m_stripid_y_lv1.emplace_back(stripid);
+		m_adc_cmn_y_lv1.emplace_back(pha);
 		m_epi_y_lv1.emplace_back(epi);
 		m_nsignal_y_lv1++;
 	    }
@@ -315,6 +322,8 @@ int ApplyDatabase::bnkPutAll()
     bnk::put<int>("detid_y_lv1", m_detid_y_lv1, 0, m_nsignal_y_lv1);
     bnk::put<int>("stripid_x_lv1", m_stripid_x_lv1, 0, m_nsignal_x_lv1);
     bnk::put<int>("stripid_y_lv1", m_stripid_y_lv1, 0, m_nsignal_y_lv1);
+    bnk::put<int>("adc_cmn_x_lv2", m_adc_cmn_x_lv1, 0, m_nsignal_x_lv1);
+    bnk::put<int>("adc_cmn_y_lv2", m_adc_cmn_y_lv1, 0, m_nsignal_y_lv1);
     bnk::put<float>("epi_x_lv1", m_epi_x_lv1, 0, m_nsignal_x_lv1);
     bnk::put<float>("epi_y_lv1", m_epi_y_lv1, 0, m_nsignal_y_lv1);
     
@@ -330,9 +339,11 @@ int ApplyDatabase::clearVectorAll()
     
     m_nsignal_x_lv1 = 0;      m_detid_x_lv1.clear();
     m_stripid_x_lv1.clear();  m_epi_x_lv1.clear();
+    m_adc_cmn_x_lv1.clear();
     
     m_nsignal_y_lv1 = 0;      m_detid_y_lv1.clear();
     m_stripid_y_lv1.clear();  m_epi_y_lv1.clear();
+    m_adc_cmn_y_lv1.clear();
     
     return anl::ANL_OK;
 }

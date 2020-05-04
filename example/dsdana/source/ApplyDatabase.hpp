@@ -48,6 +48,8 @@ private:
     std::vector<int> m_detid_y_lv1;
     std::vector<int> m_stripid_x_lv1;
     std::vector<int> m_stripid_y_lv1;
+    std::vector<int> m_adc_cmn_x_lv1;
+    std::vector<int> m_adc_cmn_y_lv1;
     std::vector<float> m_epi_x_lv1;
     std::vector<float> m_epi_y_lv1;
 
