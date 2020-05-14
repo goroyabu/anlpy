@@ -14,11 +14,12 @@ using std::setw;
 #include <iterator>
 
 anl::ANLmoduleStacker::ANLmoduleStacker()
-{
+{    
     const static int nmax = 20;
     module_chain.reserve(nmax);
     module_switch.reserve(nmax);
     module_status.reserve(nmax);
+    // cout << "anl::ANLmoduleStacker is created." << endl;
 }
 anl::ANLmoduleStacker::ANLmoduleStacker(const ANLmoduleStacker& other)
 {
@@ -32,6 +33,10 @@ anl::ANLmoduleStacker::ANLmoduleStacker(const ANLmoduleStacker& other)
 	       std::back_inserter( module_switch ) );
     std::copy( other.module_status.begin(), other.module_status.end(),
 	       std::back_inserter( module_status ) );
+}
+anl::ANLmoduleStacker::~ANLmoduleStacker()
+{
+    // cout << "anl::ANLmoduleStacker is deleted." << endl;
 }
 
 anl::ANLmoduleStacker& anl::ANLmoduleStacker::operator = (const ANLmoduleStacker& other)

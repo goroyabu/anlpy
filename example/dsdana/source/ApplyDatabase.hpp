@@ -7,12 +7,14 @@
    @date 2019/07/23 'ApplyDatabase' v2.0
    @date 2019/08/05 'ApplyDatabase' v2.1
    @date 2020/03/23 'ApplyDatabase' v1.0
+   @date 2020/05/10 version 1.0 for ANLpy
    @version 1.0
 **/
 #ifndef ApplyDatabase_hpp
 #define ApplyDatabase_hpp
 
 #include <string>
+#include <map>
 
 #include <TRandom3.h>
 #include <TH2D.h>
@@ -29,9 +31,11 @@ class ApplyDatabase : public anl::VANL_Module
 private:
     DSDdatabase * mDatabase;
     TRandom3 * mRandom;
-    TH2D * m_histall;
-    TH2D * m_spectall;
-    TH2D * m_multi_hist;
+    // TH2D * m_histall;
+    // TH2D * m_spectall;
+    // TH2D * m_multi_hist;
+
+    std::map<int, TH2D*> list_of_h2_multi;
     
     /* input */
     int m_nasic;
@@ -58,7 +62,7 @@ public:
     ~ApplyDatabase() {}
 
     int mod_bgnrun();
-    int his();
+    // int his();
     // void mod_com(int &status);
     int mod_ana();
     int mod_endrun();

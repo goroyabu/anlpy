@@ -12,6 +12,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "ANLStatus.hpp"
 #include "VANL_Module.hpp"
@@ -26,7 +27,7 @@ namespace anl {
     public:
 	
 	ANLmanager();
-	ANLmanager(const ANLmanager& other);
+	// ANLmanager(const ANLmanager& other);
 	~ANLmanager();
 	
 	/** @brief Add a module to the analysis chain **/
@@ -43,12 +44,21 @@ namespace anl {
 	
 	/** @brief Optional. Call before a next analysis **/
 	int reset_status();
-
+	
 	VANL_Module* get_module(const std::string& key);
+
+	//std::shared_ptr<>
+	static ANLmanager& Instance();
+	//static int quit();
+	int quit();
 	
     private:
-
-	static ANLmoduleStacker* module_stacker;       
+	
+	//static ANLmoduleStacker* module_stacker;
+	//static std::unique_ptr<ANLmoduleStacker> module_stacker;
+	static ANLmoduleStacker* module_stacker;
+	static std::unique_ptr<ANLmanager> manager_instance;
+	//static ANLmanager* manager_instance;
 
 	/** @brief Called at the beginning of read_data **/
 	int call_init_and_his();

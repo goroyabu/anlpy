@@ -31,8 +31,12 @@ private:
     std::vector<int> m_filled_index_list;
 
     /* output histogram */
-    TH2D * m_multipli_his;
+    // TH2D * m_multipli_his;
     bool m_save_his;
+    std::map<int, std::pair<int,int>> nsignal_lv1_on_1det;
+    std::map<int,TH2D*> list_of_h2_multi_lv1;
+    std::map<int,TH2D*> list_of_h2_multi_lv2a;
+    std::map<int,TH2D*> list_of_h2_multi_lv2b;
     
     /* input */
     int m_ndetector;
@@ -79,7 +83,7 @@ public:
 
     int mod_bgnrun();
     // int mod_his();
-    int his();
+    //int his();
     // int mod_com();
     int mod_ana();
     int mod_endrun();
@@ -102,5 +106,24 @@ public:
 
     bool isAdjacent(int stripid, const std::vector<int> &stripid_list);
     bool isAdjacent(int stripid, const std::vector<lv1data> &data_list);
+
+private:
+    const int materialid_si = 0;
+    const int materialid_cdte = 1;
+
+    bool enable_uniform_ethre_si;
+    bool enable_uniform_ethre_cdte;
+    float uniform_ethre_si;
+    float uniform_ethre_cdte;
+    
+    float energy_threshold(int material, int stripid)
+    {
+	if ( material==materialid_si && enable_uniform_ethre_si )
+	    return uniform_ethre_si;
+	else if ( material==materialid_cdte && enable_uniform_ethre_cdte )
+	    return uniform_ethre_cdte;
+	return mDatabase->GetEthre( stripid );			
+    }
+    
 };
 #endif

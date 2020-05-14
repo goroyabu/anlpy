@@ -99,7 +99,7 @@ public:
         std::vector<float> calparam;
     };
     
-private:
+protected:
 
     std::vector<data_element*> database;
     data_element maxinfo;
@@ -171,7 +171,7 @@ public:
     bool IsBadch(const int stripid);
     bool IsXside(const int stripid);
 
-    float GetEPI(const int stripid, const float pha);
+    virtual float GetEPI(const int stripid, const float pha);
 
     int GetDetectorPosz(const int detid);
     int GetDetectorWidthz(const int detid);    

@@ -1,10 +1,10 @@
 #!/bin/sh
 
 # Python package name
-PROJECT_NAME="dsdana"
+PROJECT_NAME="ccana"
 
 # ANL module list
-MODULE_LIST="ReadTTree"
+MODULE_LIST="Extract2Photon"
 
 # Options:
 #   -f     Force to overwrite existing files.

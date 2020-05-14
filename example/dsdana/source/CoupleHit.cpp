@@ -27,9 +27,10 @@ int CoupleHit::mod_bgnrun()
     // status = ANL_OK;
     //std::cout << "CoupleHit::mod_init" << std::endl;
 
-    auto manager = new anl::ANLmanager();
+    //auto manager = new anl::ANLmanager();
+    auto manager = anl::ANLmanager::Instance();
     
-    mDatabase = (DSDdatabase*)manager->get_module("DSDdatabase");
+    mDatabase = (DSDdatabase*)manager.get_module("DSDdatabase");
     if ( !mDatabase || mDatabase->mod_name()!="DSDdatabase") {
 	return anl::ANL_NG;
     }

@@ -6,6 +6,7 @@
 #include "ANLmanager.hpp"
 
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 PYBIND11_MODULE(anlpy, m) {
     
@@ -42,6 +43,7 @@ PYBIND11_MODULE(anlpy, m) {
 	.def("ReadData", &anl::ANLmanager::read_data)
 	.def("ShowAnalysis", &anl::ANLmanager::show_analysis)	
 	.def("ShowStatus", &anl::ANLmanager::show_status)
+	.def("Quit", &anl::ANLmanager::quit)
 	.def("ResetStatus", &anl::ANLmanager::reset_status);
  
 #ifdef VERSION_INFO

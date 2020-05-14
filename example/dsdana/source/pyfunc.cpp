@@ -8,6 +8,7 @@
 #include "ReadTTree.hpp"
 #include "WriteTTree.hpp"
 #include "DSDdatabase.hpp"
+#include "DSDdatabaseSpline.hpp"
 #include "ApplyDatabase.hpp"
 #include "MergeAdjacent.hpp"
 #include "CoupleHit.hpp"
@@ -58,6 +59,18 @@ PYBIND11_MODULE(dsdana, m) {
 	.def("DefineParameter", &DSDdatabase::define_parameter<bool>)
 	.def("DefineParameter", &DSDdatabase::define_parameter<std::string>)
 	.def("ShowParameter", &DSDdatabase::show_parameters);
+
+    pybind11::class_<DSDdatabaseSpline, DSDdatabase>(m, "DSDdatabaseSpline")
+	.def(pybind11::init<>())
+	.def("SetParameter", &DSDdatabaseSpline::set_parameter<int>)
+	.def("SetParameter", &DSDdatabaseSpline::set_parameter<double>)
+	.def("SetParameter", &DSDdatabaseSpline::set_parameter<bool>)
+	.def("SetParameter", &DSDdatabaseSpline::set_parameter<std::string>)
+	.def("DefineParameter", &DSDdatabaseSpline::define_parameter<int>)
+	.def("DefineParameter", &DSDdatabaseSpline::define_parameter<double>)
+	.def("DefineParameter", &DSDdatabaseSpline::define_parameter<bool>)
+	.def("DefineParameter", &DSDdatabaseSpline::define_parameter<std::string>)
+	.def("ShowParameter", &DSDdatabaseSpline::show_parameters);
 
     pybind11::class_<ApplyDatabase, anl::VANL_Module>(m, "ApplyDatabase")
 	.def(pybind11::init<>())

@@ -7,6 +7,7 @@
    @date 2019/07/23 'ApplyDatabase' v2.0 Change 'ReadDatabase' -> 'ReadDatabaseText'
    @date 2019/08/05 'ApplyDatabase' v2.1 Adapt to ReadDatabaseText v1.1
    @date 2020/03/23 'ApplyDatabase' v1.0 Divide 2 modules 'ApplyDatabase' and 'ApplyDatabase'
+   @date 2020/05/10 Change for ANLpy. Enabled to modify parameters.
    @version 1.0
 **/
 
@@ -25,9 +26,9 @@ using std::endl;
 
 ApplyDatabase::ApplyDatabase()
     : VANL_Module("ApplyDatabase", "1.0"),
-      mDatabase(nullptr), mRandom(nullptr),
-      m_histall(nullptr), m_spectall(nullptr),
-      m_multi_hist(nullptr)
+      mDatabase(nullptr), mRandom(nullptr)
+      // m_histall(nullptr), m_spectall(nullptr),
+      // m_multi_hist(nullptr)
 {
     m_asic_bgn = 0; m_asic_end = 0;
 }
@@ -45,7 +46,8 @@ int ApplyDatabase::mod_bgnrun()
     mRandom = new TRandom3();
     mRandom->SetSeed( time(NULL) );
 
-    auto manager = new anl::ANLmanager();
+    //auto manager = new anl::ANLmanager();
+    auto manager = anl::ANLmanager::Instance();
     
     // manager->show_analysis();
     // cout << "showwww" << endl;
@@ -53,13 +55,22 @@ int ApplyDatabase::mod_bgnrun()
     // if (!mm) cout << "errororor" << endl;
     // else cout << "name is " << mm->mod_name() << endl;
     
-    mDatabase = (DSDdatabase*)manager->get_module("DSDdatabase");
+    mDatabase = (DSDdatabase*)manager.get_module("DSDdatabase");
     if ( !mDatabase || mDatabase->mod_name()!="DSDdatabase") {
 	cout << "***Error*** DSDdatabase does not exist." << endl;
 	return anl::ANL_NG;
     }
     // cout << mDatabase->mod_name() << endl;
 
+    auto list_of_detid = mDatabase->GetListOfDetids();
+    for ( auto detid : list_of_detid ) {
+	TString hname = Form("h2_lv1_multi_%02d", detid);
+	TString htitle = Form("Number of signals on %02d detector;X;Y", detid);
+	auto h2 = new TH2D( hname, htitle,
+			    100, -0.5, 99.5, 100, -0.5, 99.5 );
+	list_of_h2_multi[detid] = h2;
+    }
+    
     m_nasic = mDatabase->GetNasics();
     m_asic_bgn = mDatabase->GetAsicidMin();
     m_asic_end = mDatabase->GetAsicidMax();
@@ -111,31 +122,31 @@ int ApplyDatabase::mod_bgnrun()
 
     // status = anl::ANL_OK;
 
-    his();
+    //his();
     
     return anl::ANL_OK;
 }
-int ApplyDatabase::his()
-{
-    m_histall = new TH2D("histall_lv1", "histall;stripid;pha",
-			 mDatabase->GetNstrips(),
-			 mDatabase->GetStripidMin()-0.5,
-			 mDatabase->GetStripidMax()-0.5,
-			 1000, -10.5, 989.5);
+// int ApplyDatabase::his()
+// {
+//     m_histall = new TH2D("histall_lv1", "histall;stripid;pha",
+// 			 mDatabase->GetNstrips(),
+// 			 mDatabase->GetStripidMin()-0.5,
+// 			 mDatabase->GetStripidMax()-0.5,
+// 			 1000, -10.5, 989.5);
     
-    m_spectall = new TH2D("spectall_lv1", "spectall;stripid;epi",
-			  mDatabase->GetNstrips(),
-			  mDatabase->GetStripidMin()-0.5,
-			  mDatabase->GetStripidMax()-0.5,
-			  10000, -10, 990);
+//     m_spectall = new TH2D("spectall_lv1", "spectall;stripid;epi",
+// 			  mDatabase->GetNstrips(),
+// 			  mDatabase->GetStripidMin()-0.5,
+// 			  mDatabase->GetStripidMax()-0.5,
+// 			  10000, -10, 990);
     
-    m_multi_hist = new TH2D("multipli_lv1",
-			    "multiplicity lv1;nsignal_x_lv1;nsignal_y_lv1;",
-			    50, -0.5, 49.5, 50, -0.5, 49.5);
+//     m_multi_hist = new TH2D("multipli_lv1",
+// 			    "multiplicity lv1;nsignal_x_lv1;nsignal_y_lv1;",
+// 			    50, -0.5, 49.5, 50, -0.5, 49.5);
     
-    // status = anlcross::ANL_OK;
-    return anl::ANL_OK;
-}
+//     // status = anlcross::ANL_OK;
+//     return anl::ANL_OK;
+// }
 // int ApplyDatabase::mod_com()
 // {
 //     //random mode
@@ -175,8 +186,8 @@ int ApplyDatabase::mod_ana()
 	    
 	    float epi = mDatabase->GetEPI(stripid, pha+getRandom());
 
-	    m_histall->Fill(stripid, pha);
-	    m_spectall->Fill(stripid, epi);
+	    // m_histall->Fill(stripid, pha);
+	    // m_spectall->Fill(stripid, epi);
 	    
 	    if ( mDatabase->IsXside(stripid) ) {
 		m_detid_x_lv1.emplace_back(detid);
@@ -196,7 +207,7 @@ int ApplyDatabase::mod_ana()
 	}
     }
     
-    m_multi_hist->Fill(m_nsignal_x_lv1, m_nsignal_y_lv1);
+    // m_multi_hist->Fill(m_nsignal_x_lv1, m_nsignal_y_lv1);
     
     if(m_nsignal_x_lv1==0 && m_nsignal_y_lv1==0)
     	evs::set("nsignal_x_lv1==0 && nsignal_y_lv1==0");

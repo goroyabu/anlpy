@@ -19,23 +19,54 @@ using std::left;
 using std::setw;
 
 anl::ANLmoduleStacker* anl::ANLmanager::module_stacker;
+//anl::ANLmanager* anl::ANLmanager::manager_instance;
+//std::unique_ptr<anl::ANLmoduleStacker> anl::ANLmanager::module_stacker;
+std::unique_ptr<anl::ANLmanager> anl::ANLmanager::manager_instance;
 
 anl::ANLmanager::ANLmanager()
     : VANL_Module( "ANLmanager", "1.0" )
 {
     if ( !module_stacker )
-	module_stacker = new ANLmoduleStacker();
+    	module_stacker = new ANLmoduleStacker();
+    // if ( !module_stacker )
+    // 	module_stacker = std::make_unique<ANLmoduleStacker>();
+
+    //cout << "ANLmanager is created." << endl;
     define_parameter<std::string>( "program_name", "ANL" );
     define_parameter<int>( "display_interval_msec", 1000000.0 );
 }
-anl::ANLmanager::ANLmanager(const ANLmanager& other)
-    : VANL_Module(other)
-{
-    module_stacker = other.module_stacker;
-}
+// anl::ANLmanager::ANLmanager(const ANLmanager& other)
+//     : VANL_Module(other)
+// {
+//     module_stacker = std::move(other.module_stacker);
+// }
 anl::ANLmanager::~ANLmanager()
 {
-    this->exit_process();
+    // this->exit_process();
+    // delete module_stacker;
+    // module_stacker = nullptr;
+    // cout << "Quit from ANL...." << endl;
+}
+anl::ANLmanager& anl::ANLmanager::Instance()
+{
+    // cout << "ANLmanager::Instance" << endl;
+    if ( !manager_instance ) {
+	// manager_instance = new ANLmanager();
+	manager_instance = std::unique_ptr<ANLmanager>( new ANLmanager() );
+    }
+    return *manager_instance;
+}
+int anl::ANLmanager::quit()
+{
+    cout << "Quit from ANL...." << endl;
+    if ( !module_stacker ) {
+	cout << "ANLmoduleStacker is already deleted." << endl;
+	return -1;
+    }
+    manager_instance->exit_process();
+    delete module_stacker;
+    module_stacker = nullptr;
+    return 0;
 }
 
 int anl::ANLmanager::add_module(VANL_Module* mod)
