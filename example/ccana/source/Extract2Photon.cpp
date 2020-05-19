@@ -78,6 +78,8 @@ int Extract2Photon::mod_bgnrun()
 	auto chain = new TChain( treename.c_str() );
 	chain->Add( input.c_str() );
 
+	chain->Print("toponly");
+	
 	if ( chain->GetNtrees()==0 ) {
 	    cout << treename << " is not found in " << input << endl;
 	    return anl::ANL_NG;
@@ -105,6 +107,8 @@ int Extract2Photon::mod_ana()
 {
     auto window = get_parameter<int>("time_window");
     long n_coincidence = 0;
+
+    cout << "Start extraction of coincidence events." << endl;
     
     while( multitree.NextCoin(window) ){
 
@@ -232,10 +236,13 @@ Extract2Photon::TreeCopier::TreeCopier(std::string outname, eventdata* event)
      	
 	indata = event;
 	outtree = indata->tree->CloneTree( 0 );
+	outtree->Branch( "coin_eventid", &coin_eventid, "coin_eventid/L" );
+	outtree->Branch( "coin_delta_t", &coin_delta_t, "coin_delta_t/I" );
 	outtree->Branch( "coin_ext_timeid", &m_coin_ext_timeid,
 			 "coin_ext_timeid/L");
 	outtree->Branch( "coin_int_timeid", &m_coin_int_timeid,
 			 "coin_int_timeid/L");
+	coin_eventid = -1;
 	// outfile->Add( outtree );
     }
 
@@ -247,6 +254,8 @@ Extract2Photon::TreeCopier::~TreeCopier()
 int Extract2Photon::TreeCopier::Fill(int delta_t)
 {
     if ( !outtree ) return -1;
+    ++coin_eventid;
+    coin_delta_t = delta_t;
     m_coin_ext_timeid = indata->external_clock();
     m_coin_int_timeid = indata->msec_counter;
     hist->Fill( delta_t );
@@ -276,13 +285,14 @@ Extract2Photon::MultiTreeReader::MultiTreeReader(std::vector<eventdata*> event)
 int Extract2Photon::MultiTreeReader::initialize()
 {
     auto cut_overlap = eventdata::CutOverlap(m_event);
-    std::cout << cut_overlap << std::endl;
+    cout << "Generating EventList : " << cut_overlap << "..." << endl;
     
     for(int ie=0; ie<(int)m_event.size(); ++ie){
 	auto name = Form("evlist_%04d",ie);
 	m_event[ie]->tree->Draw((TString)">>"+name, cut_overlap);
 	TEventList *elist = (TEventList*)gDirectory->Get(name);
 	m_event[ie]->tree->SetEventList(elist);
+	cout << "Completed for File " << ie+1 << endl;
     }
     
     for(auto e : m_event) e->GetSelectedEntry(-1);

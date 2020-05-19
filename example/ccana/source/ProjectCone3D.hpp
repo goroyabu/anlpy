@@ -77,6 +77,9 @@ protected:
 	std::vector<float> pos_y_lv3;
 	std::vector<float> pos_z_lv3;
 
+	long long coin_eventid;
+	int coin_delta_t;
+	
 	hittree_event()
 	    : tree(nullptr)
 	{}	
@@ -107,9 +110,16 @@ protected:
     double detector_z_position;
     
     hittree_event event;
-    
+
+public:
+
+    bool next() { return event.next(); }
     std::tuple<hit, hit> get_sc2hit_event();
     int projection(TH3F* image, const hit& si, const hit& cdte);
+    inline int projection(const hit& si, const hit& cdte)
+    {
+	return projection(image, si, cdte);
+    }
 
     inline bool has_flour(const hit& h)
     {
@@ -152,6 +162,11 @@ protected:
 	auto z = h->GetZaxis()->GetBinCenter(zbin);
 	return TVector3(x, y, z);				
     }
+    inline std::tuple<long, int> coin_info()
+    {
+	return std::make_tuple( event.coin_eventid, event.coin_delta_t );
+    }
+
     
 };
 

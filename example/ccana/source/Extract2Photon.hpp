@@ -72,7 +72,9 @@ private:
 	TTree * outtree;
 	eventdata * indata;
 	TH1D * hist;
-	
+
+	long int coin_eventid;
+	int coin_delta_t;
 	long int m_coin_ext_timeid;
 	long int m_coin_int_timeid;
 	

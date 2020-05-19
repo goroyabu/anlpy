@@ -14,6 +14,8 @@ using std::endl;
 #include <bnk.hpp>
 #include <evs.hpp>
 
+#include <TROOT.h>
+#include <TSeqCollection.h>
 
 ProjectCone3D::ProjectCone3D()
     : anl::VANL_Module("ProjectCone3D", "0.1"),
@@ -46,6 +48,8 @@ int ProjectCone3D::mod_bgnrun()
     auto nbins = get_parameter<int>("nbins_1axis");
     auto xmin = get_parameter<double>("axis_minimum");
     auto xmax = get_parameter<double>("axis_maximum");
+
+    // cout << "current_dir=" << gDirectory->GetName() << endl;
     
     auto ifname = get_parameter<std::string>("input_file");
     input_file = new TFile( ifname.c_str() );
@@ -64,15 +68,33 @@ int ProjectCone3D::mod_bgnrun()
 
     event.set_branch_address(input_tree);	
     
-    auto ofname = get_parameter<std::string>("output_file");    
-    output_file = new TFile( ofname.c_str(), "recreate" );
-    if ( !output_file || output_file->IsZombie() ) {
-	cout << "Creating " << ofname << " is failed." << endl;
-	return anl::ANL_NG;
-    }
-    cout << ofname << " is created." << endl;
+    auto ofname = get_parameter<std::string>("output_file");
 
-    image = new TH3F( "response", "response;X(mm);Y(mm);Z(mm)",
+    TSeqCollection * list = gROOT->GetListOfFiles();
+    auto opened = list->FindObject( ofname.c_str() );
+    if ( !!opened ) {
+	cout << opened->GetName() << " " << opened->ClassName() << endl;
+    }
+    else cout << "null" << endl;
+    
+    if ( !!opened && opened->ClassName()==(TString)"TFile"
+	 && ((TFile*)opened)->IsWritable() ) {
+	output_file = (TFile*)opened;
+	output_file->cd();
+	cout << ofname << " is already opened." << endl;	
+    }
+    else {        
+	output_file = new TFile( ofname.c_str(), "recreate" );
+	if ( !output_file || output_file->IsZombie() ) {
+	    cout << "Creating " << ofname << " is failed." << endl;
+	    return anl::ANL_NG;
+	}
+	cout << ofname << " is created." << endl;
+    }
+
+    auto copyid = get_parameter<std::string>("copyid");
+    image = new TH3F( (TString)"response"+copyid.c_str(),
+		      "response;X(mm);Y(mm);Z(mm)",
 		      nbins, xmin, xmax, nbins, xmin, xmax, nbins, xmin, xmax );
     
     auto otname = get_parameter<std::string>("output_tree");
@@ -129,9 +151,10 @@ int ProjectCone3D::mod_ana()
 
 int ProjectCone3D::mod_endrun()
 {
+    cout << mod_name2() << "::mod_endrun" << endl;
     output_file->cd();
     output_tree->Write();
-    output_file->Close();
+    // output_file->Close();
     input_file->Close();
     return anl::ANL_OK;
 }
@@ -259,7 +282,13 @@ int ProjectCone3D::hittree_event::set_branch_address(TTree* tree)
     tree->SetBranchAddress( "epi_y_lv3", epi_y_lv3.data() );
     tree->SetBranchAddress( "pos_x_lv3", pos_x_lv3.data() );
     tree->SetBranchAddress( "pos_y_lv3", pos_y_lv3.data() );
-    tree->SetBranchAddress( "pos_z_lv3", pos_z_lv3.data() );    
+    tree->SetBranchAddress( "pos_z_lv3", pos_z_lv3.data() );
+
+    if ( exist_branch(tree, "coin_eventid") )
+	tree->SetBranchAddress( "coin_eventid", &coin_eventid );
+    if ( exist_branch(tree, "coin_delta_t") )
+	tree->SetBranchAddress( "coin_delta_t", &coin_delta_t );
+    
     nentries = tree->GetEntries();
     current_entry = -1;
     this->tree = tree;    

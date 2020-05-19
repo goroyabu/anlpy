@@ -13,6 +13,7 @@
 #include <TFile.h>
 #include <TTree.h>
 #include <TH3F.h>
+#include <TH2D.h>
 
 class IterateCone3D : public anl::VANL_Module
 {
@@ -26,7 +27,7 @@ public:
     int mod_ana() override;
     int mod_endrun() override;
 
-protected:
+public:
 
     struct resptree_event
     {
@@ -60,6 +61,16 @@ protected:
 	    return true;
 	}	
     };
+
+    class TH3Slicer
+    {
+    public:
+	static std::vector<TH2D*> Slice(TH3F* th3);
+    private:
+	static TH2D* define_slice(TH3F* th3, int slice_axis=2);
+    };
+    
+protected:
     
     TFile * input_file;
     TTree * input_tree;

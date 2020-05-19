@@ -81,9 +81,87 @@ int IterateCone3D::mod_ana()
 int IterateCone3D::mod_endrun()
 {
     output_file->cd();
+    
+    auto slice = TH3Slicer::Slice(sbp_image);        
     sbp_image->Write();
+    for ( auto itr : slice ) itr->Write();
+    
     output_file->Close();    
     input_file->Close();
     return anl::ANL_OK;
 }
 
+std::vector<TH2D*> IterateCone3D::TH3Slicer::Slice(TH3F* th3)
+{
+    std::vector<TH2D*> list_of_slices;
+    if ( !th3 ) return list_of_slices;    
+
+    TH2D * frame = define_slice(th3);
+    TString hname = th3->GetName();
+
+    std::map<int, TAxis*> axis;
+    axis[0] = th3->GetXaxis();
+    axis[1] = th3->GetYaxis();
+    axis[2] = th3->GetZaxis();
+
+    int slice_axis = 2;
+    int xaxis = (slice_axis+1)%3;
+    int yaxis = (slice_axis+2)%3;
+
+    auto nbinsx = axis[xaxis]->GetNbins();
+    auto nbinsy = axis[yaxis]->GetNbins();
+    auto nbinsz = axis[slice_axis]->GetNbins();
+    
+    for ( int islice=1; islice<nbinsz+1; ++islice ) {
+
+	auto slice = (TH2D*)frame->Clone();
+	auto slicez = axis[slice_axis]->GetBinCenter( islice );
+	
+	TString sname = Form( hname+"_slice_%04d", islice );
+	TString title = Form( "slice of "+hname+" at %.3f", slicez );
+	slice->SetNameTitle( sname, title );	
+	
+	for ( int ix=1; ix<nbinsx+1; ix++ ) {
+	    
+	    for ( int iy=1; iy<nbinsy+1; iy++ ) {
+		
+		auto content = th3->GetBinContent( ix, iy, islice );		
+		slice->SetBinContent( ix, iy, content );
+		
+	    }
+	}
+	list_of_slices.emplace_back( slice );
+    }
+    
+    return list_of_slices;
+}
+
+TH2D* IterateCone3D::TH3Slicer::define_slice(TH3F* th3, int slice_axis)
+{
+    // auto xaxis = th3->GetXaxis();
+    // auto yaxis = th3->GetYaxis();
+    // auto zaxis = th3->GetZaxis();
+
+    std::map<int, TAxis*> axis;
+    axis[0] = th3->GetXaxis();
+    axis[1] = th3->GetYaxis();
+    axis[2] = th3->GetZaxis();
+
+    std::vector<double> axis_min;
+    std::vector<double> axis_max;
+    std::vector<int> axis_nbins;    
+    
+    for ( int i=1; i<3; ++i ) {
+	int iaxis = (slice_axis+i)%3;
+	axis_min.emplace_back( axis[iaxis]->GetXmin() );
+	axis_max.emplace_back( axis[iaxis]->GetXmax() );
+	axis_nbins.emplace_back( axis[iaxis]->GetNbins() );
+    }
+
+    TString hname = (TString)th3->GetName()+"_slice_frame";
+    auto h2 = new TH2D( hname, hname,
+			axis_nbins[0], axis_min[0], axis_max[0],
+			axis_nbins[1], axis_min[1], axis_max[1] );
+
+    return h2;
+}

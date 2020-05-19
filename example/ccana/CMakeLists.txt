@@ -3,7 +3,7 @@
 # ----- PROJECT NAME & VERSION ----- #
 project(ccana CXX)
 set(USER_ANL_LIB_NAME ${PROJECT_NAME}c)
-set(MODULE_CXX_LIST source/Extract2Photon.cpp source/ProjectCone3D.cpp source/IterateCone3D.cpp)
+set(MODULE_CXX_LIST source/Extract2Photon.cpp source/ProjectCone3D.cpp source/Project2Photon3D.cpp source/IterateCone3D.cpp source/Iterate2Photon3D.cpp)
 
 # ----- CMake & Compiler ----- #
 cmake_minimum_required(VERSION 3.16)
