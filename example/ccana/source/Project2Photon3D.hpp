@@ -32,6 +32,7 @@ private:
     double e1_window_begin, e1_window_end;
     double e2_window_begin, e2_window_end;
     int time_window;
+    bool is_event_list_only;
 
     inline bool is_in_energy_range1(double energy)
     {
@@ -43,6 +44,9 @@ private:
     }    
 
     TFile* open_file(std::string file_name);
+
+    std::tuple<ProjectCone3D::hit, ProjectCone3D::hit>
+    convert_coordinate(int camera_id, const ProjectCone3D::hit& si, const ProjectCone3D::hit& cdte);
     
 };
 

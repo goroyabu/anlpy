@@ -30,21 +30,23 @@ public:
     int mod_ana() override;
     int mod_endrun() override;
     
-protected:    
+public:
 
     struct hit
     {
+	int detid;
 	double e,x,y,z;
 
 	hit()
-	    : e(0.0), x(0.0), y(0.0), z(0.0)
+	    : detid(-1), e(0.0), x(0.0), y(0.0), z(0.0)
 	{}
 	hit(const hit& other)
-	    : e(other.e),
+	    : detid(other.detid), e(other.e),
 	      x(other.x), y(other.y), z(other.z)
 	{}
 	hit& operator=(const hit& other)
 	{
+	    detid = other.detid;
 	    e = other.e;
 	    x = other.x; y = other.y; z = other.z;
 	    return *this;
@@ -84,7 +86,10 @@ protected:
 	    : tree(nullptr)
 	{}	
 
-	bool exist_branch(TTree* tree, TString key);	
+	bool exist_branch(TTree* tree, TString key);
+	bool exist_branch(TString key) {
+	    return exist_branch( this->tree, key);
+	}
 	int set_branch_address(TTree* tree);
 	bool next();
        	
@@ -108,19 +113,48 @@ protected:
     double e_window_end;
     double theta_max_degree;
     double detector_z_position;
+    bool is_event_list_only;
+    double rotation_around_vertical_deg;
     
     hittree_event event;
+    
+    /* branch */
+    int num_hits;
+    unsigned int externalCLK;
+    unsigned int first_internalCLK;
+    short hit1_detector;
+    float hit1_energy;
+    float hit1_posx;
+    float hit1_posy;
+    float hit1_posz;
+    short hit2_detector;
+    float hit2_energy;
+    float hit2_posx;
+    float hit2_posy;
+    float hit2_posz;
+    short hit3_detector;
+    float hit3_energy;
+    float hit3_posx;
+    float hit3_posy;
+    float hit3_posz;
+    float totalenergy;    
 
 public:
 
     bool next() { return event.next(); }
     std::tuple<hit, hit> get_sc2hit_event();
-    int projection(TH3F* image, const hit& si, const hit& cdte);
-    inline int projection(const hit& si, const hit& cdte)
+    bool projection(TH3F* image, const hit& si, const hit& cdte);
+
+    inline bool projection(const hit& si, const hit& cdte)
     {
 	return projection(image, si, cdte);
     }
-
+    inline int fill()
+    {
+	output_tree->Fill();
+	return 0;
+    }
+    
     inline bool has_flour(const hit& h)
     {
 	//if ( 20.0<h.e && h.e<30.0 ) return true;
@@ -167,6 +201,9 @@ public:
 	return std::make_tuple( event.coin_eventid, event.coin_delta_t );
     }
 
+private:
+    int define_branch(TTree* tree);
+   
     
 };
 

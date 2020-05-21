@@ -38,6 +38,8 @@ ProjectCone3D::ProjectCone3D()
     define_parameter<double>("axis_maximum", 25.0);
     define_parameter<double>("theta_max_degree", 150.0);
     define_parameter<double>("detector_z_position", -41.0);
+    define_parameter<int>("event_list_only", 0);
+    define_parameter<double>("rotation_around_vertical_deg", 0.0);
 }
 ProjectCone3D::~ProjectCone3D()
 {
@@ -72,10 +74,10 @@ int ProjectCone3D::mod_bgnrun()
 
     TSeqCollection * list = gROOT->GetListOfFiles();
     auto opened = list->FindObject( ofname.c_str() );
-    if ( !!opened ) {
-	cout << opened->GetName() << " " << opened->ClassName() << endl;
-    }
-    else cout << "null" << endl;
+    // if ( !!opened ) {
+    // 	cout << opened->GetName() << " " << opened->ClassName() << endl;
+    // }
+    // else cout << "null" << endl;
     
     if ( !!opened && opened->ClassName()==(TString)"TFile"
 	 && ((TFile*)opened)->IsWritable() ) {
@@ -91,22 +93,25 @@ int ProjectCone3D::mod_bgnrun()
 	}
 	cout << ofname << " is created." << endl;
     }
-
-    auto copyid = get_parameter<std::string>("copyid");
-    image = new TH3F( (TString)"response"+copyid.c_str(),
-		      "response;X(mm);Y(mm);Z(mm)",
-		      nbins, xmin, xmax, nbins, xmin, xmax, nbins, xmin, xmax );
     
     auto otname = get_parameter<std::string>("output_tree");
     output_tree = new TTree( otname.c_str(), otname.c_str() );
-    if ( !output_tree->Branch( "response", "TH3F", &image ) ) {
-	cout << "Creating a branch of TH3F is failed." << endl;
-	return anl::ANL_NG;
+
+    auto copyid = get_parameter<std::string>("copyid");
+    is_event_list_only = get_parameter<int>("event_list_only");
+
+    if ( !is_event_list_only ) {
+	image = new TH3F( (TString)"response"+copyid.c_str(),
+			  "response;X(mm);Y(mm);Z(mm)",
+			  nbins, xmin, xmax, nbins, xmin, xmax, nbins, xmin, xmax );
     }
 
+    if ( define_branch( output_tree )!=anl::ANL_OK ) return anl::ANL_NG;
+    
     evs::define("Si-CdTe 2hits event");
-    evs::define("SC2hits w/o flour");
-    evs::define("SC2hits in E-window");
+    evs::define("SC-2hits w/o flour");
+    evs::define("SC-2hits in E-window");
+    evs::define("SC-2hits in Theta-range");
 
     e_window_begin = get_parameter<double>("e_window_begin");
     e_window_end = get_parameter<double>("e_window_end");
@@ -117,6 +122,9 @@ int ProjectCone3D::mod_bgnrun()
     e_threshold_cdte = get_parameter<double>("e_threshold_cdte");
     theta_max_degree = get_parameter<double>("theta_max_degree");
     detector_z_position = get_parameter<double>("detector_z_position");
+
+    rotation_around_vertical_deg
+	= get_parameter<double>("rotation_around_vertical_deg");
     
     return anl::ANL_OK;
 }
@@ -134,16 +142,20 @@ int ProjectCone3D::mod_ana()
     if ( has_flour(si) || has_flour(cdte) ) 
 	return anl::ANL_SKIP;    
     
-    evs::set("SC2hits w/o flour");
+    evs::set("SC-2hits w/o flour");
     
     if ( !is_in_energy_range( si.Energy()+cdte.Energy() ) )
 	return anl::ANL_SKIP;
 
-    evs::set("SC2hits in E-window");
+    evs::set("SC-2hits in E-window");
 
     if ( !is_in_theta_range( si, cdte ) )
-	return anl::ANL_SKIP;    
-       
+	return anl::ANL_SKIP;           
+
+    evs::set("SC-2hits in Theta-range");
+    
+    if ( is_event_list_only ) return anl::ANL_OK;
+
     this->projection( image, si, cdte );
     
     return anl::ANL_OK;
@@ -159,14 +171,15 @@ int ProjectCone3D::mod_endrun()
     return anl::ANL_OK;
 }
 
-int ProjectCone3D::projection(TH3F* image, const hit& si, const hit& cdte)
+bool ProjectCone3D::projection(TH3F* image, const hit& si, const hit& cdte)
 {
+    // cout << "projection" << endl;
     image->Reset();
     auto nvoxels = image->GetNcells();
     
     auto scat  = si.Postion();
-    auto abso  = cdte.Postion();
-
+    auto abso  = cdte.Postion();    
+    
     auto vec_cone_axis = scat - abso; //fHitPos[0] - fHitPos[1];
     auto scat_angle_deg = eval_theta( si.Energy(), cdte.Energy() );
     //Double_t armrad = armdeg*TMath::Pi()/180.0;
@@ -215,9 +228,48 @@ int ProjectCone3D::projection(TH3F* image, const hit& si, const hit& cdte)
 	//image->Fill( voxel.x, voxel.y, voxel.z, weight );
 	//fHistBranch->Fill(voxx,voxy,voxz,weight);	
     }
-    if ( is_filled_voxels ) output_tree->Fill();
+    // if ( is_filled_voxels ) output_tree->Fill();
+
+    return is_filled_voxels;
+    // return 0;
+}
+int ProjectCone3D::define_branch(TTree* tree)
+{
+            
+    tree->Branch( "num_hits", &num_hits, "num_hits/I" );
+    tree->Branch( "externalCLK", &externalCLK, "externalCLK/i" );
+    tree->Branch( "first_internalCLK", &first_internalCLK, "internalCLK/i" );
+    tree->Branch( "hit1_detector", &hit1_detector, "hit1_detector/S" );
+    tree->Branch( "hit1_energy", &hit1_energy, "hit1_energy/F" );
+    tree->Branch( "hit1_posx", &hit1_posx, "hit1_posx/F" );
+    tree->Branch( "hit1_posy", &hit1_posy, "hit1_posy/F" );
+    tree->Branch( "hit1_posz", &hit1_posz, "hit1_posz/F" );
+    tree->Branch( "hit2_detector", &hit2_detector, "hit2_detector/S" );
+    tree->Branch( "hit2_energy", &hit2_energy, "hit2_energy/F" );
+    tree->Branch( "hit2_posx", &hit2_posx, "hit2_posx/F" );
+    tree->Branch( "hit2_posy", &hit2_posy, "hit2_posy/F" );
+    tree->Branch( "hit2_posz", &hit2_posz, "hit2_posz/F" );
+    tree->Branch( "hit3_detector", &hit3_detector, "hit3_detector/S" );
+    tree->Branch( "hit3_energy", &hit3_energy, "hit3_energy/F" );
+    tree->Branch( "hit3_posx", &hit3_posx, "hit3_posx/F" );
+    tree->Branch( "hit3_posy", &hit3_posy, "hit3_posy/F" );
+    tree->Branch( "hit3_posz", &hit3_posz, "hit3_posz/F" );
+    tree->Branch( "totalenergy", &totalenergy, "totalenergy/F" );
     
-    return 0;
+    if ( event.exist_branch("coin_eventid") ) 
+	output_tree->Branch( "coin_eventid", &event.coin_eventid, "coin_eventid/L" );
+    
+    if ( event.exist_branch("coin_delta_t") ) 
+	output_tree->Branch( "coin_delta_t", &event.coin_delta_t, "coin_delta_t/I" );
+
+    if ( is_event_list_only ) return anl::ANL_OK;
+    
+    if ( !tree->Branch( "response", "TH3F", &image ) ) {
+	cout << "Creating a branch of TH3F is failed." << endl;
+	return anl::ANL_NG;
+    }
+    
+    return anl::ANL_OK;
 }
 
 std::tuple<ProjectCone3D::hit, ProjectCone3D::hit> ProjectCone3D::get_sc2hit_event()
@@ -228,6 +280,7 @@ std::tuple<ProjectCone3D::hit, ProjectCone3D::hit> ProjectCone3D::get_sc2hit_eve
     for ( int i=0; i<event.nhit_lv3; ++i ) {
 	
 	if ( is_cdte(event.detid_lv3[i]) && event.epi_y_lv3[i]>=e_threshold_cdte ) {
+	    cdte.detid = event.detid_lv3[i];
 	    cdte.e = event.epi_y_lv3[i];
 	    cdte.x = event.pos_x_lv3[i];
 	    cdte.y = event.pos_y_lv3[i];
@@ -235,6 +288,7 @@ std::tuple<ProjectCone3D::hit, ProjectCone3D::hit> ProjectCone3D::get_sc2hit_eve
 	    ++n_cdte;
 	}
 	else if ( is_si(event.detid_lv3[i]) && event.epi_x_lv3[i]>=e_threshold_si ) {
+	    si.detid = event.detid_lv3[i];
 	    si.e = event.epi_x_lv3[i];
 	    si.x = event.pos_x_lv3[i];
 	    si.y = event.pos_y_lv3[i];
@@ -242,7 +296,32 @@ std::tuple<ProjectCone3D::hit, ProjectCone3D::hit> ProjectCone3D::get_sc2hit_eve
 	    ++n_si;
 	}	
     }    
-   
+
+    if ( rotation_around_vertical_deg ) {
+	cdte.x = -1.0 * cdte.x;
+	cdte.z = -1.0 * cdte.z;
+	si.x = -1.0 * si.x;
+	si.z = -1.0 * si.z;
+    }
+    
+    num_hits = n_si + n_cdte;
+    hit1_detector = si.detid;
+    hit1_energy = si.e;
+    hit1_posx = si.x;
+    hit1_posy = si.y;
+    hit1_posz = si.z;
+    hit2_detector = cdte.detid;
+    hit2_energy = cdte.e;
+    hit2_posx = cdte.x;
+    hit2_posy = cdte.y;
+    hit2_posz = cdte.z;
+    hit3_detector = -1;
+    hit3_energy = -1.0;
+    hit3_posx = 0.0;
+    hit3_posy = 0.0;
+    hit3_posz = 0.0;
+    totalenergy = si.e + cdte.e;
+    
     if ( n_si==1 && n_cdte==1 ) return std::make_tuple( si, cdte );
     return std::make_tuple( hit(), hit() );
 }

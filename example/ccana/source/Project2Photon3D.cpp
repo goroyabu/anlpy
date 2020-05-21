@@ -30,12 +30,13 @@ Project2Photon3D::Project2Photon3D()
     define_parameter<std::string>("input_file2", "input2.root");
     define_parameter<std::string>("input_tree2", "hittree2");
 
-    define_parameter<std::string>("output_file", "output.root");
+    define_parameter<std::string>("output_file1", "output1.root");
+    define_parameter<std::string>("output_file2", "output2.root");
     define_parameter<std::string>("output_tree1", "resptree1");
     define_parameter<std::string>("output_tree2", "resptree2");
     
-    define_parameter<double>("e_window_begin", 100.0);
-    define_parameter<double>("e_window_end", 300.0);
+    define_parameter<double>("e_rough_window_begin", 100.0);
+    define_parameter<double>("e_rough_window_end", 300.0);
     define_parameter<double>("cone_thick_deg", 0.5);
     define_parameter<double>("distance_index", 2.0);
     define_parameter<double>("e_threshold_si", 5.0);
@@ -51,13 +52,13 @@ Project2Photon3D::Project2Photon3D()
     define_parameter<double>("e2_window_begin", 235);
     define_parameter<double>("e2_window_end",   255);
     define_parameter<int>("time_window", 10);
+
+    define_parameter<int>("event_list_only", 0);
     
     projectors[1] = new ProjectCone3D();
     projectors[1]->set_parameter<std::string>("copyid", "cc1");
     projectors[2] = new ProjectCone3D();
-    projectors[2]->set_parameter<std::string>("copyid", "cc2");
-
-    
+    projectors[2]->set_parameter<std::string>("copyid", "cc2");    
 }
 Project2Photon3D::~Project2Photon3D()
 {
@@ -69,39 +70,52 @@ int Project2Photon3D::mod_bgnrun()
     auto input_tree1 = get_parameter<std::string>("input_tree1");    
     auto input_file2 = get_parameter<std::string>("input_file2");
     auto input_tree2 = get_parameter<std::string>("input_tree2");
-    auto output_file = get_parameter<std::string>("output_file");
+    auto output_file1 = get_parameter<std::string>("output_file1");
+    auto output_file2 = get_parameter<std::string>("output_file2");
     auto output_tree1 = get_parameter<std::string>("output_tree1");
     auto output_tree2 = get_parameter<std::string>("output_tree2");
 
     projectors[1]->set_parameter<std::string>("input_file", input_file1);
     projectors[1]->set_parameter<std::string>("input_tree", input_tree1);
-    projectors[1]->set_parameter<std::string>("output_file", output_file);
+    projectors[1]->set_parameter<std::string>("output_file", output_file1);
     projectors[1]->set_parameter<std::string>("output_tree", output_tree1);
     projectors[2]->set_parameter<std::string>("input_file", input_file2);
     projectors[2]->set_parameter<std::string>("input_tree", input_tree2);
-    projectors[2]->set_parameter<std::string>("output_file", output_file);
+    projectors[2]->set_parameter<std::string>("output_file", output_file2);
     projectors[2]->set_parameter<std::string>("output_tree", output_tree2);
     
-    auto pname_int = { "nbins_1axis" };
+    auto pname_int = { "nbins_1axis", "event_list_only" };
     auto pname_double = { "axis_minimum", "axis_maximum",
-			  "e_window_begin", "e_window_end", "cone_thick_deg",
+			  "cone_thick_deg",
 			  "distance_index", "e_threshold_si", "e_threshold_cdte",
 			  "theta_max_degree", "detector_z_position" };
 
+    cout << "  ----- Parameters of ProjectCone3D modules in Project2Photon3D ----- ";
+    cout << endl;
+
+    projectors[1]->set_parameter("rotation_around_vertical_deg", 0.0);
+    projectors[2]->set_parameter("rotation_around_vertical_deg", 180.0);
+    
     for ( auto cc : projectors ) {
+
 	for ( auto p : pname_int ) {
 	    cc.second->set_parameter<int>( p, get_parameter<int>(p) );
 	}
 	for ( auto p : pname_double ) {
 	    cc.second->set_parameter<double>( p, get_parameter<double>(p) );
 	}
-    }
 
+	cc.second->set_parameter<double>( "e_window_begin", get_parameter<double>("e_rough_window_begin") );
+	cc.second->set_parameter<double>( "e_window_end", get_parameter<double>("e_rough_window_end") );
+
+	cc.second->show_parameters();
+    }        
+    
     for ( auto cc : projectors )
 	if ( cc.second->mod_bgnrun() != anl::ANL_OK ) return anl::ANL_NG; 
 
 
-    outfile = open_file( output_file );
+    outfile = open_file( output_file1 );
     if ( !outfile ) return anl::ANL_NG;
     h2_energy_coin = new TH2D( "h2_energy_coin", "Energy Si+CdTe;CC1(keV);CC2(keV)",
 			       1000, -0.5, 999.5, 1000, -0.5, 999.5 );
@@ -118,6 +132,8 @@ int Project2Photon3D::mod_bgnrun()
     e2_window_end   = get_parameter<double>("e2_window_end");
     time_window     = get_parameter<int>("time_window");
 
+    is_event_list_only = get_parameter<int>("event_list_only");
+    
     evs::define("Coincidece events in time window");
     evs::define("SC-2hits and SC-2hits coincidence");
     evs::define("CC1 in E-range1 and CC2 in E-range2");
@@ -166,9 +182,20 @@ int Project2Photon3D::mod_ana()
 	evs::set("CC1 in E-range2 and CC2 in E-range1");
     }
     else return anl::ANL_SKIP;
+
+    auto [ si2_new, cdte2_new ] = convert_coordinate( 2, si2, cdte2 );
     
-    projectors[1]->projection( si1, cdte1 );
-    projectors[2]->projection( si2, cdte2 );    
+    if ( !is_event_list_only ) {
+	auto is_filled_cc1 = projectors[1]->projection( si1, cdte1 );
+	auto is_filled_cc2 = projectors[2]->projection( si2_new, cdte2_new );
+	
+	if ( !is_filled_cc1 || !is_filled_cc2 ) return anl::ANL_OK;
+	// projectors[1]->fill();
+	// projectors[2]->fill();
+    }
+
+    projectors[1]->fill();
+    projectors[2]->fill();	    
     
     // // evs::set("Si-CdTe 2hits event");
 
@@ -248,4 +275,26 @@ TFile* Project2Photon3D::open_file(std::string file_name)
 	return f;
     }
     return nullptr;
+}
+
+std::tuple<ProjectCone3D::hit, ProjectCone3D::hit>
+Project2Photon3D::convert_coordinate
+(int camera_id, const ProjectCone3D::hit& si, const ProjectCone3D::hit& cdte)
+{    
+    if ( camera_id != 1 && camera_id != 2 )
+	return std::make_tuple( si, cdte ); 
+    
+    auto si_new = si;
+    auto cdte_new = cdte;
+
+    // if ( camera_id == 2 ) {
+    // 	si_new.x = -1.0 * si.x;
+    // 	si_new.y = si.y;
+    // 	si_new.z = -1.0 * si.z;
+    // 	cdte_new.x = -1.0 * cdte.x;
+    // 	cdte_new.y = cdte.y;
+    // 	cdte_new.z = -1.0 * cdte.z;
+    // }
+
+    return std::make_tuple( si_new, cdte_new );    
 }

@@ -40,6 +40,10 @@ add_executable(extract_2photon source/extract.cpp)
 target_link_libraries(extract_2photon PRIVATE ${USER_ANL_LIB_NAME} anl ${ROOT_LIBRARIES})
 install(TARGETS extract_2photon DESTINATION bin)
 
+add_executable(iterate_mlem source/iterate.cpp)
+target_link_libraries(iterate_mlem PRIVATE ${USER_ANL_LIB_NAME} anl ${ROOT_LIBRARIES})
+install(TARGETS iterate_mlem DESTINATION bin)
+
 # ----- Uninstallation ----- #
 configure_file(cmake_uninstall.cmake.in cmake_uninstall.cmake IMMEDIATE @ONLY)
 add_custom_target(uninstall COMMAND "${CMAKE_COMMAND}" -P cmake_uninstall.cmake)

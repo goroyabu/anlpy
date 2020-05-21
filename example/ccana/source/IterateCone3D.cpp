@@ -24,6 +24,7 @@ IterateCone3D::IterateCone3D()
     define_parameter<std::string>("input_tree", "resptree");
     define_parameter<std::string>("output_file", "output.root");
     define_parameter<int>("n_of_iterations", 0);
+    define_parameter<double>("denominator_offset", 10.0);
 }
 IterateCone3D::~IterateCone3D()
 {
@@ -65,17 +66,55 @@ int IterateCone3D::mod_bgnrun()
     sbp_image->SetName("sbp_image");
 
     n_of_iterations = get_parameter<int>("n_of_iterations");
+
+    denominator_offset = get_parameter<double>("denominator_offset");
     
     return anl::ANL_OK;
 }
 
 int IterateCone3D::mod_ana()
 {
-    if ( !event.next() ) return anl::ANL_LOOP;
+    // if ( !event.next() ) return anl::ANL_LOOP;
+    // while ( event.next() ) {    
+    // 	sbp_image->Add( event.response );
+    // }
 
-    sbp_image->Add( event.response );
+    if ( n_of_iterations == 0 ) {
+	
+	while ( event.next() ) 
+	    sbp_image->Add( event.response );
+	
+	return anl::ANL_LOOP;
+    }
+    else {
+
+	while ( event.next() ) {
+	    sbp_image->Add( event.response );
+	    auto integral = event.response->Integral();
+	    vector_integral_of_response.emplace_back( integral );
+	}
+
+    }
+
+    cout << "first backprojection is done" << endl;
     
-    return anl::ANL_OK;
+    mlem_image.reserve( n_of_iterations );
+    
+    auto new_image = next_image( sbp_image );
+    mlem_image.emplace_back( new_image );
+    if ( n_of_iterations>1 ) 
+	cout << "1/" << n_of_iterations << "iteration is done" << endl;    
+    
+    for ( int iteration=1; iteration<n_of_iterations; ++iteration ) {
+	
+	auto new_image = next_image( mlem_image[ iteration-1 ] );	
+	mlem_image.emplace_back( new_image );
+
+	cout << iteration+1 << "/" << n_of_iterations;
+	cout << " iteration is done" << endl;	
+    }    
+    
+    return anl::ANL_LOOP;
 }
 
 int IterateCone3D::mod_endrun()
@@ -85,11 +124,56 @@ int IterateCone3D::mod_endrun()
     auto slice = TH3Slicer::Slice(sbp_image);        
     sbp_image->Write();
     for ( auto itr : slice ) itr->Write();
+
+    for ( auto image : mlem_image ) {
+	auto slices = TH3Slicer::Slice( image );
+	for ( auto itr : slices ) itr->Write();
+	image->Write();
+    }
     
     output_file->Close();    
     input_file->Close();
     return anl::ANL_OK;
 }
+
+TH3F* IterateCone3D::next_image(TH3F* previous_image)
+{
+    // vector_integral_of_multiple.clear();
+
+    auto new_image = (TH3F*)previous_image->Clone();
+    auto iteration = (int)mlem_image.size();
+    new_image->SetName( Form( "mlem_image_iter%03d", iteration) );
+    
+    long current_entry = -1;
+    event.init_entry();
+    
+    while ( event.next() ) {
+	
+	++current_entry;
+
+	auto multiple = (TH3F*)event.response->Clone();
+	multiple->Multiply( previous_image );
+
+	auto integral = multiple->Integral();
+	// vector_integral_of_multiple.emplace_back( integral );
+
+	auto tempo = (TH3F*)event.response->Clone();
+	tempo->Scale( vector_integral_of_response[ current_entry ] /
+		      ( integral + denominator_offset ) );
+	
+	new_image->Add( tempo );
+
+	multiple->Delete();
+	tempo->Delete();
+	
+    }
+    
+    new_image->Multiply( previous_image );
+    
+    return new_image;
+}
+
+
 
 std::vector<TH2D*> IterateCone3D::TH3Slicer::Slice(TH3F* th3)
 {

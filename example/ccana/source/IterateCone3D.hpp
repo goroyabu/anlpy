@@ -10,6 +10,7 @@
 
 #include <VANL_Module.hpp>
 
+#include <iostream>
 #include <TFile.h>
 #include <TTree.h>
 #include <TH3F.h>
@@ -58,8 +59,19 @@ public:
 	    ++current_entry;
 	    if ( current_entry>=nentries ) return false;
 	    tree->GetEntry(current_entry);
+
+	    if ( current_entry%100==0 ) {
+		std::cout << current_entry << "/" << nentries << std::endl;
+	    }
+	    
 	    return true;
-	}	
+	}
+	bool init_entry()
+	{
+	    current_entry = -1;
+	    if ( nentries>0 ) tree->GetEntry(0);
+	    return true;
+	}
     };
 
     class TH3Slicer
@@ -77,9 +89,17 @@ protected:
     TFile * output_file;
     resptree_event event;
     TH3F * sbp_image;
+    std::vector<TH3F*> mlem_image;
+    
+    std::vector<double> vector_integral_of_response;
+    // std::vector<double> vector_integral_of_multiple;    
 
+    
     /* Parameters */
     int n_of_iterations;
+    double denominator_offset;
+    
+    TH3F* next_image(TH3F* previous_image);
 };
 
 #endif
