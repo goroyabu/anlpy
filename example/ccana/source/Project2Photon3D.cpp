@@ -47,12 +47,15 @@ Project2Photon3D::Project2Photon3D()
     define_parameter<double>("theta_max_degree", 150.0);
     define_parameter<double>("detector_z_position", -41.0);
 
+    define_parameter<double>("e1_peak_energy", 171.3);
+    define_parameter<double>("e2_peak_energy", 245.4);
     define_parameter<double>("e1_window_begin", 160);
     define_parameter<double>("e1_window_end",   180);
     define_parameter<double>("e2_window_begin", 235);
     define_parameter<double>("e2_window_end",   255);
     define_parameter<int>("time_window", 10);
 
+    define_parameter<int>("use_si_energy_only", 0);
     define_parameter<int>("event_list_only", 0);
     
     projectors[1] = new ProjectCone3D();
@@ -125,19 +128,33 @@ int Project2Photon3D::mod_bgnrun()
     
     h1_energy_cc2 = new TH1D( "h1_energy_cc2", "Energy Si+CdTe on CC2;keV",
 			      1000, -0.5, 999.5);
-    
+
+    h2_energy_cc1 = new TH2D( "h2_energy_cc1", "Energy on CC1;CdTe(keV);Si(keV)",
+			      1000, -0.5, 999.5, 1000, -0.5, 999.5 ); 
+
+    h2_energy_cc2 = new TH2D( "h2_energy_cc2", "Energy on CC2;CdTe(keV);Si(keV)",
+			      1000, -0.5, 999.5, 1000, -0.5, 999.5 ); 
+
+    e1_peak_energy = get_parameter<double>("e1_peak_energy");
+    e2_peak_energy = get_parameter<double>("e2_peak_energy");
     e1_window_begin = get_parameter<double>("e1_window_begin");
     e1_window_end   = get_parameter<double>("e1_window_end");
     e2_window_begin = get_parameter<double>("e2_window_begin");
     e2_window_end   = get_parameter<double>("e2_window_end");
     time_window     = get_parameter<int>("time_window");
 
+    use_si_energy_only = get_parameter<int>("use_si_energy_only");
     is_event_list_only = get_parameter<int>("event_list_only");
     
     evs::define("Coincidece events in time window");
     evs::define("SC-2hits and SC-2hits coincidence");
+    evs::define("Coincidece events in theta range");
     evs::define("CC1 in E-range1 and CC2 in E-range2");
     evs::define("CC1 in E-range2 and CC2 in E-range1");
+
+    evs::define("E-range but Cone1 not projected");
+    evs::define("E-range but Cone2 not projected");
+    evs::define("E-range but Both Cone not projected");
     
     return anl::ANL_OK;
 }
@@ -161,7 +178,7 @@ int Project2Photon3D::mod_ana()
 	return anl::ANL_LOOP;
     }
     
-    if ( time_window<delta_t1 ) return anl::ANL_SKIP;
+    if ( time_window<fabs(delta_t1) ) return anl::ANL_SKIP;
     evs::set("Coincidece events in time window");
     
     if ( si1.Energy()<=0.0 || cdte1.Energy()<=0.0 ) return anl::ANL_SKIP;
@@ -171,27 +188,56 @@ int Project2Photon3D::mod_ana()
     
     auto energy1 = si1.Energy() + cdte1.Energy();
     auto energy2 = si2.Energy() + cdte2.Energy();
+
     h2_energy_coin->Fill( energy1, energy2 );
     h1_energy_cc1->Fill( energy1 );
     h1_energy_cc2->Fill( energy2 );
-   
+    
+    h2_energy_cc1->Fill( si1.Energy(), cdte1.Energy() );
+    h2_energy_cc2->Fill( si2.Energy(), cdte2.Energy() );
+
+    if ( !projectors[1]->is_in_theta_range( si1, cdte1 ) ) 
+	return anl::ANL_SKIP;
+    if ( !projectors[2]->is_in_theta_range( si2, cdte2 ) ) 
+	return anl::ANL_SKIP;        
+    evs::set("Coincidece events in theta range");
+    
     if ( is_in_energy_range1(energy1) && is_in_energy_range2(energy2) ) {
-	evs::set("CC1 in E-range1 and CC2 in E-range2");	
+	evs::set("CC1 in E-range1 and CC2 in E-range2");
+	if ( use_si_energy_only && !is_event_list_only ) {
+	    cdte1.e = e1_peak_energy - si1.e;
+	    cdte2.e = e2_peak_energy - si2.e;
+	}
     }
     else if ( is_in_energy_range2(energy1) && is_in_energy_range1(energy2) ) {
 	evs::set("CC1 in E-range2 and CC2 in E-range1");
+	if ( use_si_energy_only && !is_event_list_only ) {
+	    cdte1.e = e2_peak_energy - si1.e;
+	    cdte2.e = e1_peak_energy - si2.e;
+	}
     }
     else return anl::ANL_SKIP;
-
-    auto [ si2_new, cdte2_new ] = convert_coordinate( 2, si2, cdte2 );
     
-    if ( !is_event_list_only ) {
+    // auto [ si2_new, cdte2_new ] = convert_coordinate( 2, si2, cdte2 );
+    
+    if ( !is_event_list_only ) {	
 	auto is_filled_cc1 = projectors[1]->projection( si1, cdte1 );
-	auto is_filled_cc2 = projectors[2]->projection( si2_new, cdte2_new );
+	auto is_filled_cc2 = projectors[2]->projection( si2, cdte2 );
 	
-	if ( !is_filled_cc1 || !is_filled_cc2 ) return anl::ANL_OK;
-	// projectors[1]->fill();
-	// projectors[2]->fill();
+	// if ( !is_filled_cc1 || !is_filled_cc2 ) return anl::ANL_OK;
+	if ( is_filled_cc1==false && is_filled_cc2 ) {
+	    evs::set("E-range but Cone1 not projected");
+	    return anl::ANL_SKIP;
+	}
+	else if ( is_filled_cc1 && is_filled_cc2==false ) {
+	    evs::set("E-range but Cone2 not projected");
+	    return anl::ANL_SKIP;
+	}
+	else if ( is_filled_cc1==false && is_filled_cc2==false ) {
+	    evs::set("E-range but Both Cone not projected");
+	    return anl::ANL_SKIP;
+	}	
+
     }
 
     projectors[1]->fill();
@@ -234,6 +280,8 @@ int Project2Photon3D::mod_endrun()
     h2_energy_coin->Write();
     h1_energy_cc1->Write();
     h1_energy_cc2->Write();
+    h2_energy_cc1->Write();
+    h2_energy_cc2->Write();
     
     return anl::ANL_OK;
 }

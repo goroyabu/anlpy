@@ -109,7 +109,7 @@ int ProjectCone3D::mod_bgnrun()
     if ( define_branch( output_tree )!=anl::ANL_OK ) return anl::ANL_NG;
     
     evs::define("Si-CdTe 2hits event");
-    evs::define("SC-2hits w/o flour");
+    // evs::define("SC-2hits w/o flour");
     evs::define("SC-2hits in E-window");
     evs::define("SC-2hits in Theta-range");
 
@@ -139,15 +139,17 @@ int ProjectCone3D::mod_ana()
 
     evs::set("Si-CdTe 2hits event");
 
-    if ( has_flour(si) || has_flour(cdte) ) 
-	return anl::ANL_SKIP;    
-    
-    evs::set("SC-2hits w/o flour");
+    // if ( has_flour(si) || has_flour(cdte) ) 
+    // 	return anl::ANL_SKIP;        
+    // evs::set("SC-2hits w/o flour");
     
     if ( !is_in_energy_range( si.Energy()+cdte.Energy() ) )
 	return anl::ANL_SKIP;
 
     evs::set("SC-2hits in E-window");
+
+    // if ( use_cdte_energy_for_abso==false && is_event_list_only==false )
+    // 	cdte.e = peak_energy - si.e;
 
     if ( !is_in_theta_range( si, cdte ) )
 	return anl::ANL_SKIP;           
@@ -155,9 +157,10 @@ int ProjectCone3D::mod_ana()
     evs::set("SC-2hits in Theta-range");
     
     if ( is_event_list_only ) return anl::ANL_OK;
-
-    this->projection( image, si, cdte );
     
+    auto is_filled_voxels = this->projection( image, si, cdte );
+    if ( is_filled_voxels ) this->fill();
+        
     return anl::ANL_OK;
 }
 
@@ -235,7 +238,12 @@ bool ProjectCone3D::projection(TH3F* image, const hit& si, const hit& cdte)
 }
 int ProjectCone3D::define_branch(TTree* tree)
 {
-            
+    tree->Branch( "ti", &ti, "ti/i" );
+    tree->Branch( "livetime", &livetime, "livetime/i" );
+    tree->Branch( "unixtime", &unixtime, "unixtime/i" );
+    tree->Branch( "ext1pps", &ext1pps, "ext1pps/i" );
+    tree->Branch( "msec_counter", &msec_counter, "msec_counter/i" );
+    
     tree->Branch( "num_hits", &num_hits, "num_hits/I" );
     tree->Branch( "externalCLK", &externalCLK, "externalCLK/i" );
     tree->Branch( "first_internalCLK", &first_internalCLK, "internalCLK/i" );
@@ -274,26 +282,39 @@ int ProjectCone3D::define_branch(TTree* tree)
 
 std::tuple<ProjectCone3D::hit, ProjectCone3D::hit> ProjectCone3D::get_sc2hit_event()
 {
+    ti = event.ti;
+    livetime = event.livetime;
+    unixtime = event.unixtime;
+    ext1pps = event.ext1pps;
+    msec_counter = event.msec_counter;
+    
     int n_si = 0; int n_cdte = 0;
     hit si; hit cdte;
     
     for ( int i=0; i<event.nhit_lv3; ++i ) {
 	
-	if ( is_cdte(event.detid_lv3[i]) && event.epi_y_lv3[i]>=e_threshold_cdte ) {
+	if ( is_cdte(event.detid_lv3[i])
+	     && event.epi_y_lv3[i]>=e_threshold_cdte ){
+	    
 	    cdte.detid = event.detid_lv3[i];
 	    cdte.e = event.epi_y_lv3[i];
 	    cdte.x = event.pos_x_lv3[i];
 	    cdte.y = event.pos_y_lv3[i];
 	    cdte.z = event.pos_z_lv3[i] + detector_z_position;
 	    ++n_cdte;
+	    
 	}
-	else if ( is_si(event.detid_lv3[i]) && event.epi_x_lv3[i]>=e_threshold_si ) {
+	else if ( is_si(event.detid_lv3[i])
+		  && event.epi_x_lv3[i]>=e_threshold_si
+		  && is_fluor( event.epi_x_lv3[i])==false ) {
+	    
 	    si.detid = event.detid_lv3[i];
 	    si.e = event.epi_x_lv3[i];
 	    si.x = event.pos_x_lv3[i];
 	    si.y = event.pos_y_lv3[i];
 	    si.z = event.pos_z_lv3[i] + detector_z_position;
 	    ++n_si;
+	    
 	}	
     }    
 
@@ -336,6 +357,12 @@ bool ProjectCone3D::hittree_event::exist_branch(TTree* tree, TString key)
 }
 int ProjectCone3D::hittree_event::set_branch_address(TTree* tree)
 {
+    tree->SetBranchAddress( "ti", &ti );
+    tree->SetBranchAddress( "livetime", &livetime );
+    tree->SetBranchAddress( "unixtime", &unixtime );
+    tree->SetBranchAddress( "ext1pps", &ext1pps );
+    tree->SetBranchAddress( "msec_counter", &msec_counter );
+    
     if ( !exist_branch(tree, "nhit_lv3")  ) return anl::ANL_NG;
     if ( !exist_branch(tree, "detid_lv3") ) return anl::ANL_NG;
     if ( !exist_branch(tree, "epi_lv3")   ) return anl::ANL_NG;

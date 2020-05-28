@@ -11,6 +11,8 @@
 using std::cout;
 using std::endl;
 
+#include <TChain.h>
+
 #include <bnk.hpp>
 #include <evs.hpp>
 
@@ -25,6 +27,7 @@ IterateCone3D::IterateCone3D()
     define_parameter<std::string>("output_file", "output.root");
     define_parameter<int>("n_of_iterations", 0);
     define_parameter<double>("denominator_offset", 10.0);
+    define_parameter<int>("eventid", -1);
 }
 IterateCone3D::~IterateCone3D()
 {
@@ -33,21 +36,29 @@ IterateCone3D::~IterateCone3D()
 int IterateCone3D::mod_bgnrun()
 {
     auto input_file_name = get_parameter<std::string>("input_file");
-    input_file = new TFile( input_file_name.c_str() );
-    if ( !input_file || input_file->IsZombie() ) {
-	cout << "Opening " << input_file_name << " is failed." << endl;
-	return anl::ANL_NG;
-    }
-    cout << input_file_name << " is opened." << endl;
+    // input_file = new TFile( input_file_name.c_str() );
+    // if ( !input_file || input_file->IsZombie() ) {
+    // 	cout << "Opening " << input_file_name << " is failed." << endl;
+    // 	return anl::ANL_NG;
+    // }
+    // cout << input_file_name << " is opened." << endl;
 
     auto input_tree_name = get_parameter<std::string>("input_tree");
-    input_tree = (TTree*)input_file->Get( input_tree_name.c_str() );
-    if ( !input_tree ) {
-	cout << input_tree_name << " is not found." << endl;
-	return anl::ANL_NG;
-    }
+    // input_tree = (TTree*)input_file->Get( input_tree_name.c_str() );
+    // if ( !input_tree ) {
+    // 	cout << input_tree_name << " is not found." << endl;
+    // 	return anl::ANL_NG;
+    // }
 
-    auto nentries = event.set_branch_address(input_tree);
+    auto chain = new TChain( input_tree_name.c_str() );
+    chain->Add( input_file_name.c_str() );
+    if ( chain->GetNtrees()==0 ) {
+	cout << input_tree_name << " is not found in " << input_file_name << endl;
+	return anl::ANL_NG;
+    }    
+    
+    // auto nentries = event.set_branch_address(input_tree);
+    auto nentries = event.set_branch_address( chain );
     if ( nentries==0 ) {
 	cout << input_tree_name << " has NO event." << endl;
 	return anl::ANL_NG;
@@ -63,11 +74,14 @@ int IterateCone3D::mod_bgnrun()
     cout << ofname << " is created." << endl;
 
     sbp_image = (TH3F*)event.response->Clone();
+    sbp_image->Reset();
     sbp_image->SetName("sbp_image");
 
     n_of_iterations = get_parameter<int>("n_of_iterations");
 
     denominator_offset = get_parameter<double>("denominator_offset");
+    eventid = get_parameter<int>("eventid");
+    current_entry = -1;
     
     return anl::ANL_OK;
 }
@@ -80,9 +94,13 @@ int IterateCone3D::mod_ana()
     // }
 
     if ( n_of_iterations == 0 ) {
-	
-	while ( event.next() ) 
+
+	while ( event.next() ) {
+	    ++current_entry;
+	    if ( eventid>=0 && eventid>current_entry ) continue;
+	    if ( eventid>=0 && eventid<current_entry ) return anl::ANL_LOOP;
 	    sbp_image->Add( event.response );
+	}
 	
 	return anl::ANL_LOOP;
     }
@@ -132,7 +150,7 @@ int IterateCone3D::mod_endrun()
     }
     
     output_file->Close();    
-    input_file->Close();
+    // input_file->Close();
     return anl::ANL_OK;
 }
 

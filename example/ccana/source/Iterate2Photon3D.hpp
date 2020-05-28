@@ -40,6 +40,10 @@ private:
 
     TFile * output_file;
     TH3F * sbp_image;
+
+    //int number_of_events;
+    int eventid;
+    int current_entry;
 };
 
 #endif

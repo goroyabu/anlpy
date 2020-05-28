@@ -25,6 +25,8 @@ Iterate2Photon3D::Iterate2Photon3D()
     define_parameter<std::string>("input_tree2", "resptree2");    
     define_parameter<std::string>("output_file", "output.root");
     define_parameter<int>("n_of_iterations", 0);
+    // define_parameter<int>("number_of_events", -1);
+    define_parameter<int>("eventid", -1);
 }
 Iterate2Photon3D::~Iterate2Photon3D()
 {
@@ -47,20 +49,36 @@ int Iterate2Photon3D::mod_bgnrun()
     if ( !output_file ) return anl::ANL_NG;
     
     sbp_image = (TH3F*)event1.response->Clone();
-    sbp_image->SetName("sbp_image");    
+    sbp_image->Reset();
+    sbp_image->SetName("sbp_image");
+
+    //number_of_events = get_parameter<int>("number_of_events");
+    eventid = get_parameter<int>("eventid");
+    current_entry = -1;
     
     return anl::ANL_OK;
 }
 
 int Iterate2Photon3D::mod_ana()
 {
+    // if ( 0<number_of_events && current_entry<=number_of_events )
+    // 	return anl::ANL_LOOP;
+	    
     if ( !event1.next() ) return anl::ANL_LOOP;
     if ( !event2.next() ) return anl::ANL_LOOP;
+
+    ++current_entry;
+
+    if ( eventid!=-1 && eventid>current_entry )
+	return anl::ANL_SKIP;
+    if ( eventid!=-1 && eventid<current_entry )
+	return anl::ANL_LOOP;
     
     auto h1 = (TH3F*)event1.response->Clone();
-    h1->Multiply( event2.response );
+    auto h2 = (TH3F*)event2.response->Clone();
+    h1->Multiply( h2 );
     
-    sbp_image->Add( event1.response );
+    sbp_image->Add( h1 );
     
     return anl::ANL_OK;
 }

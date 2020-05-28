@@ -93,11 +93,12 @@ protected:
     
     std::vector<double> vector_integral_of_response;
     // std::vector<double> vector_integral_of_multiple;    
-
     
     /* Parameters */
     int n_of_iterations;
     double denominator_offset;
+    int eventid;
+    int current_entry;
     
     TH3F* next_image(TH3F* previous_image);
 };

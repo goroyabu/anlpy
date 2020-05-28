@@ -23,6 +23,7 @@ using std::endl;
 #include <TH1D.h>
 #include <TCut.h>
 #include <TChain.h>
+#include <TChainElement.h>
 
 #include <bnk.hpp>
 #include <evs.hpp>
@@ -78,7 +79,25 @@ int Extract2Photon::mod_bgnrun()
 	auto chain = new TChain( treename.c_str() );
 	chain->Add( input.c_str() );
 
-	chain->Print("toponly");
+	// chain->Print("toponly");
+
+	// TObjArray *fileElements = fBsd->GetListOfFiles();
+// 	TIter next(fileElements);
+// 	TChainElement *chEl = 0;
+// 	while (( chEl=(TChainElement*)next() )) {
+// 	    fprintf(stdout, "[%s]\tListOfFiles\t'%s'\n", __FUNCTION__, chEl->GetTitle() );
+// }
+
+	int ifile = 0;
+	auto list = chain->GetListOfFiles();
+	TIter next(list);
+	TChainElement * elem = 0;
+	
+	while( (elem = (TChainElement*)next() ) ) {
+	    cout << "File" << ifile << " : " << elem->GetTitle() << endl;
+	    ++ifile;
+	}
+	
 	
 	if ( chain->GetNtrees()==0 ) {
 	    cout << treename << " is not found in " << input << endl;
@@ -292,6 +311,8 @@ int Extract2Photon::MultiTreeReader::initialize()
 	m_event[ie]->tree->Draw((TString)">>"+name, cut_overlap);
 	TEventList *elist = (TEventList*)gDirectory->Get(name);
 	m_event[ie]->tree->SetEventList(elist);
+	cout << "Total entries = " << m_event[ie]->tree->GetEntries();
+	cout << " in File " << ie+1 << endl; 
 	cout << "Completed for File " << ie+1 << endl;
     }
     
@@ -308,39 +329,66 @@ bool Extract2Photon::MultiTreeReader::next_entry(std::vector<eventdata*>& event)
 bool Extract2Photon::MultiTreeReader::NextCoin(const int window)
 {
     //const int window = 100;
+
+    if( !next_entry(m_event) ) return false;
+    auto is_message_printed = false;
+    
     while( true ){
-	if( !next_entry(m_event) ) return false;
+
+	if ( m_event[0]->GetSelectedCurrentEntry()
+	     >=m_event[0]->GetSelectedEntries() ) return false;
+	if ( m_event[1]->GetSelectedCurrentEntry()
+	     >=m_event[1]->GetSelectedEntries() ) return false;	
 	
-	if(m_event[0]->GetSelectedCurrentEntry()%100000==0){
+	// if( !next_entry(m_event) ) return false;
+	
+	if( m_event[0]->GetSelectedCurrentEntry()%100000==0 && !is_message_printed ){
 	    std::cout << m_event[0]->GetSelectedCurrentEntry() << " / ";
 	    std::cout << m_event[0]->GetSelectedEntries() << "(";
 	    std::cout << (double)m_event[0]->GetSelectedCurrentEntry()/m_event[0]->GetSelectedEntries()*100.0 << "%)" << std::endl;
+	    is_message_printed = true;
 	}
 	
 	auto gap_of_external_time_id = m_event[0]->time_id() - m_event[1]->time_id();
 	
-	if     ( gap_of_external_time_id < 0 ) {
-	    m_event[0]->NextSelectedEntry();  continue;
+	if      ( gap_of_external_time_id < 0 ) {
+	    if ( m_event[0]->NextSelectedEntry() == false )
+	    	return false;
+	    // m_event[0]->NextSelectedEntry();
+	    continue;
 	}
-	else if( gap_of_external_time_id > 0 ) {
-	    m_event[1]->NextSelectedEntry();  continue;
+	else if ( gap_of_external_time_id > 0 ) {
+	    if ( m_event[1]->NextSelectedEntry() == false )
+	    	return false;
+	    // m_event[1]->NextSelectedEntry();
+	    continue;
 	}
 	else {
 	    
 	    auto gap_of_internal_time_id
 		= (int)(m_event[0]->msec_counter - m_event[1]->msec_counter);
 	    
-	    if( std::abs(gap_of_internal_time_id)<=window ) return true;
+	    if ( std::abs(gap_of_internal_time_id)<=window ) return true;
 	    
-	    if     ( gap_of_internal_time_id < 0 ) {
-		m_event[0]->NextSelectedEntry();  continue;
+	    if      ( gap_of_internal_time_id < 0 ) {
+		if ( m_event[0]->NextSelectedEntry()==false )
+		    return false;
+		// m_event[0]->NextSelectedEntry();
+		continue;
 	    }
-	    else if( gap_of_internal_time_id > 0 ) {
-		m_event[1]->NextSelectedEntry();  continue;
+	    else if ( gap_of_internal_time_id > 0 ) {
+		if ( m_event[1]->NextSelectedEntry()==false )
+		    return false;
+		// m_event[1]->NextSelectedEntry();
+		continue;
 	    }
 	    else {
-		m_event[0]->NextSelectedEntry();
-		m_event[1]->NextSelectedEntry();
+		if ( m_event[0]->NextSelectedEntry()==false )
+		    return false;
+		if ( m_event[1]->NextSelectedEntry()==false )
+		    return false;
+		// m_event[0]->NextSelectedEntry();
+		// m_event[1]->NextSelectedEntry();
 		continue;
 	    }
 	    

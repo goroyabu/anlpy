@@ -28,10 +28,19 @@ private:
     TH2D * h2_energy_coin;
     TH1D * h1_energy_cc1;
     TH1D * h1_energy_cc2;
-    
+
+    TH2D * h2_energy_cc2;
+    TH2D * h2_energy_cc1;
+
+    // TH2D * h2_energy_cc2_in_theta;
+    // TH2D * h2_energy_cc1_in_theta;   
+
+    double e1_peak_energy, e2_peak_energy;
     double e1_window_begin, e1_window_end;
     double e2_window_begin, e2_window_end;
     int time_window;
+
+    bool use_si_energy_only;
     bool is_event_list_only;
 
     inline bool is_in_energy_range1(double energy)

@@ -70,6 +70,12 @@ public:
 	long current_entry;
 
     public:
+	unsigned int ti;
+	unsigned int livetime;
+	unsigned int unixtime;
+	unsigned int ext1pps;
+	unsigned int msec_counter;
+	
 	int nhit_lv3;
 	std::vector<int> detid_lv3;
 	std::vector<float> epi_lv3;
@@ -119,6 +125,12 @@ protected:
     hittree_event event;
     
     /* branch */
+    unsigned int ti;
+    unsigned int livetime;
+    unsigned int unixtime;
+    unsigned int ext1pps;
+    unsigned int msec_counter;
+    
     int num_hits;
     unsigned int externalCLK;
     unsigned int first_internalCLK;
@@ -155,11 +167,11 @@ public:
 	return 0;
     }
     
-    inline bool has_flour(const hit& h)
-    {
-	//if ( 20.0<h.e && h.e<30.0 ) return true;
-	return false;
-    }
+    // inline bool has_flour(const hit& h)
+    // {
+    // 	//if ( 20.0<h.e && h.e<30.0 ) return true;
+    // 	return false;
+    // }
     inline bool is_in_energy_range(const double total_energy)
     {
 	if ( e_window_begin<=total_energy && total_energy<=e_window_end )
@@ -168,10 +180,16 @@ public:
     }
     inline bool is_in_theta_range(const hit& scat, const hit& abso)
     {
-	//auto theta = eval_theta( scat.e, abso.e );
-	//if ( 150.0<=theta ) return false;
-	return true;
+	auto theta = eval_theta( scat.e, abso.e );
+	if ( 0<theta && theta<=theta_max_degree ) return true;
+	return false;
     }
+    inline bool is_fluor(double energy)
+    {
+	// return false;
+	return 21.0<energy && energy<=28.0;
+    }
+    
     inline bool is_si(int detid)
     {
 	return detid==0 || detid==1;
@@ -184,8 +202,9 @@ public:
     inline double eval_theta(double scat, double abso)
     {
 	static const double mass_of_electron = 511.0;
-	auto costheta = 1 - mass_of_electron * ( 1/abso - 1/(scat+abso) );	
-	return TMath::ACos(costheta);
+	auto costheta = 1 - mass_of_electron * ( 1/abso - 1/(scat+abso) );
+	if ( costheta<-1.0 || 1.0<costheta ) return -1;
+	return std::fabs( TMath::ACos(costheta) );
     }
     inline TVector3 voxel_center(TH3* h, int bin)
     {
