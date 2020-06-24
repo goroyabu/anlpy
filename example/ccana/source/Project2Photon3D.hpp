@@ -31,7 +31,14 @@ private:
 
     TH2D * h2_energy_cc2;
     TH2D * h2_energy_cc1;
+    
+    TH1D * h1_delta_t_2photon;
 
+    TH1D * h1_si_cc1_peak1;
+    TH1D * h1_si_cc1_peak2;
+    TH1D * h1_si_cc2_peak1;
+    TH1D * h1_si_cc2_peak2;
+    
     // TH2D * h2_energy_cc2_in_theta;
     // TH2D * h2_energy_cc1_in_theta;   
 
@@ -42,6 +49,7 @@ private:
 
     bool use_si_energy_only;
     bool is_event_list_only;
+    bool use_fluor_event;
 
     inline bool is_in_energy_range1(double energy)
     {

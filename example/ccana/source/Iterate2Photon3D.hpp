@@ -44,6 +44,9 @@ private:
     //int number_of_events;
     int eventid;
     int current_entry;
+
+    bool is_enabled_normalize_cross_section;
+    
 };
 
 #endif

@@ -16,6 +16,7 @@ using std::endl;
 
 #include <TROOT.h>
 #include <TSeqCollection.h>
+#include <TCanvas.h>
 
 ProjectCone3D::ProjectCone3D()
     : anl::VANL_Module("ProjectCone3D", "0.1"),
@@ -40,6 +41,8 @@ ProjectCone3D::ProjectCone3D()
     define_parameter<double>("detector_z_position", -41.0);
     define_parameter<int>("event_list_only", 0);
     define_parameter<double>("rotation_around_vertical_deg", 0.0);
+    define_parameter<int>("enable_reject_fluor", 1);
+    define_parameter<int>("enable_normalize_cone", 1);
 }
 ProjectCone3D::~ProjectCone3D()
 {
@@ -104,8 +107,11 @@ int ProjectCone3D::mod_bgnrun()
 	image = new TH3F( (TString)"response"+copyid.c_str(),
 			  "response;X(mm);Y(mm);Z(mm)",
 			  nbins, xmin, xmax, nbins, xmin, xmax, nbins, xmin, xmax );
+	h1_cone_filling_ratio
+	    = new TH1D( (TString)"cone_filling_ratio_"+copyid.c_str(),
+			"cone_filling_ratio;Z(mm)", nbins, xmin, xmax );
     }
-
+    
     if ( define_branch( output_tree )!=anl::ANL_OK ) return anl::ANL_NG;
     
     evs::define("Si-CdTe 2hits event");
@@ -122,9 +128,12 @@ int ProjectCone3D::mod_bgnrun()
     e_threshold_cdte = get_parameter<double>("e_threshold_cdte");
     theta_max_degree = get_parameter<double>("theta_max_degree");
     detector_z_position = get_parameter<double>("detector_z_position");
-
+    
     rotation_around_vertical_deg
 	= get_parameter<double>("rotation_around_vertical_deg");
+
+    enable_reject_fluor = get_parameter<int>("enable_reject_fluor");
+    enable_normalize_cone = get_parameter<int>("enable_normalize_cone");
     
     return anl::ANL_OK;
 }
@@ -174,6 +183,85 @@ int ProjectCone3D::mod_endrun()
     return anl::ANL_OK;
 }
 
+TH1D* ProjectCone3D::cone_filling_ratio
+(TH3F* image, const TVector3& scat, const TVector3& abso, double scat_angle_deg)
+{
+    auto vec_cone_axis = scat - abso;
+    // auto scat_angle_deg = eval_theta( si.Energy(), cdte.Energy() );
+
+    auto vec_genline_origin = vec_cone_axis;
+    auto vertical = vec_cone_axis.Cross( TVector3(0,1,0) );
+    vec_genline_origin.Rotate( scat_angle_deg, vertical );
+
+    static const int nplot = 1000;
+    double deltaphi = 2*TMath::Pi()/nplot;
+
+    // auto zaxis = image->GetZaxis();
+    this->h1_cone_filling_ratio->Reset();
+    auto nbins = this->h1_cone_filling_ratio->GetXaxis()->GetNbins();
+    
+    for ( int iphi=0; iphi<nplot; ++iphi ) {
+
+	auto phi = deltaphi*iphi;
+	auto vec_genline = vec_genline_origin;
+	vec_genline.Rotate( phi, vec_cone_axis );
+
+	for ( int zbin=1; zbin<nbins+1; zbin++ ) {
+
+	    auto z = h1_cone_filling_ratio->GetXaxis()->GetBinCenter( zbin );
+	    auto deltaz_scat_to_xyplane = z - scat.Z();
+	    
+	    auto vec_genline_scat_to_xyplane = vec_genline;
+	    vec_genline_scat_to_xyplane *= deltaz_scat_to_xyplane/vec_genline.Z();
+
+	    auto pos_genline_on_xyplane = scat + vec_genline_scat_to_xyplane;
+	    
+	    if ( is_in_image(image, pos_genline_on_xyplane) )
+		h1_cone_filling_ratio->Fill( z, (double)1/nplot );
+	    
+	}	
+    }
+
+    // h1_cone_filling_ratio->Draw();
+    // gPad->SaveAs("test.png");
+    
+    // h1_cone_filling_ratio->Scale( (double)1/nplot );
+    return h1_cone_filling_ratio;
+}
+double ProjectCone3D::scale_by_filling_ratio(TH3F* th3, TH1D* ratio)
+{
+    auto nbinsx = th3->GetXaxis()->GetNbins();
+    auto nbinsy = th3->GetYaxis()->GetNbins();
+    auto nbinsz = th3->GetZaxis()->GetNbins();
+    auto nbins_th1 = ratio->GetXaxis()->GetNbins();
+    if ( nbinsz != nbins_th1 ) return -1;
+    
+    for ( int zbin=1; zbin<=nbinsz; ++zbin ) {
+	
+	auto z = th3->GetZaxis()->GetBinCenter(zbin);
+	double integral = 0.0;
+	
+	for ( int xbin=1; xbin<=nbinsx; ++xbin ) 
+	    for ( int ybin=1; ybin<=nbinsy; ++ybin ) 
+		integral += th3->GetBinContent( xbin, ybin, zbin );
+
+	if ( integral == 0.0 ) continue;
+	auto factor = 1/integral;//get_bin_content(ratio, z)/integral;
+	auto rate = get_bin_content(ratio, z);
+	if ( factor==0.0 || rate==0.0 ) continue; 
+
+	// cout << integral << " " << factor << " " << rate << endl;
+	
+	for ( int xbin=1; xbin<=nbinsx; ++xbin ) 
+	    for ( int ybin=1; ybin<=nbinsy; ++ybin ) 
+		th3->SetBinContent( xbin, ybin, zbin,
+				    th3->GetBinContent( xbin, ybin, zbin )
+				    *factor*rate );	    	    	    
+    }
+    
+    return 0;
+}
+
 bool ProjectCone3D::projection(TH3F* image, const hit& si, const hit& cdte)
 {
     // cout << "projection" << endl;
@@ -188,8 +276,9 @@ bool ProjectCone3D::projection(TH3F* image, const hit& si, const hit& cdte)
     //Double_t armrad = armdeg*TMath::Pi()/180.0;
     //fDthetaCompcone = armrad/2.35;
     //fTanDthetaCompcone = TMath::Tan(fDthetaCompcone);
-
-    bool is_filled_voxels = false;
+    
+    // bool is_filled_voxels = false;
+    int n_of_filled_voxels = 0;
     
     for ( int i=0; i<nvoxels; ++i ) {
 	if ( image->IsBinOverflow(i) || image->IsBinUnderflow(i) )
@@ -223,19 +312,32 @@ bool ProjectCone3D::projection(TH3F* image, const hit& si, const hit& cdte)
 	
 	auto weight = TMath::Power( mag_vec_nearest_to_vox, distance_index_omega )
 	    *TMath::Exp( -0.5* TMath::Power( perpen_dist/sigma, 2 ) );
-
+	
 	if ( weight<=0 ) continue;
 	image->SetBinContent( i, image->GetBinContent(i)+weight );
-	is_filled_voxels = true;
+	// is_filled_voxels = true;
+	++n_of_filled_voxels;
 	
 	//image->Fill( voxel.x, voxel.y, voxel.z, weight );
 	//fHistBranch->Fill(voxx,voxy,voxz,weight);	
     }
     // if ( is_filled_voxels ) output_tree->Fill();
 
-    return is_filled_voxels;
-    // return 0;
+    const static int threshold_n_of_filled_voxels = 10;
+    
+    if ( n_of_filled_voxels<=threshold_n_of_filled_voxels )
+	return false;
+
+    if ( enable_normalize_cone==false )
+	return true;
+    
+    auto filling_ratio = cone_filling_ratio(image, scat, abso, scat_angle_deg);
+    
+    scale_by_filling_ratio( image, filling_ratio );
+    
+    return true;
 }
+
 int ProjectCone3D::define_branch(TTree* tree)
 {
     tree->Branch( "ti", &ti, "ti/i" );
@@ -287,6 +389,8 @@ std::tuple<ProjectCone3D::hit, ProjectCone3D::hit> ProjectCone3D::get_sc2hit_eve
     unixtime = event.unixtime;
     ext1pps = event.ext1pps;
     msec_counter = event.msec_counter;
+    externalCLK = event.ext1pps;
+    first_internalCLK = event.msec_counter;
     
     int n_si = 0; int n_cdte = 0;
     hit si; hit cdte;
@@ -306,7 +410,7 @@ std::tuple<ProjectCone3D::hit, ProjectCone3D::hit> ProjectCone3D::get_sc2hit_eve
 	}
 	else if ( is_si(event.detid_lv3[i])
 		  && event.epi_x_lv3[i]>=e_threshold_si
-		  && is_fluor( event.epi_x_lv3[i])==false ) {
+		  && is_rejected_as_fluor( event.epi_x_lv3[i] )==false ) {
 	    
 	    si.detid = event.detid_lv3[i];
 	    si.e = event.epi_x_lv3[i];

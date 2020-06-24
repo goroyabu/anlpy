@@ -27,6 +27,8 @@ Iterate2Photon3D::Iterate2Photon3D()
     define_parameter<int>("n_of_iterations", 0);
     // define_parameter<int>("number_of_events", -1);
     define_parameter<int>("eventid", -1);
+
+    define_parameter<int>("enable_normalize_cross_section", 0);
 }
 Iterate2Photon3D::~Iterate2Photon3D()
 {
@@ -55,6 +57,8 @@ int Iterate2Photon3D::mod_bgnrun()
     //number_of_events = get_parameter<int>("number_of_events");
     eventid = get_parameter<int>("eventid");
     current_entry = -1;
+
+    is_enabled_normalize_cross_section = get_parameter<int>("enable_normalize_cross_section");
     
     return anl::ANL_OK;
 }
@@ -77,6 +81,12 @@ int Iterate2Photon3D::mod_ana()
     auto h1 = (TH3F*)event1.response->Clone();
     auto h2 = (TH3F*)event2.response->Clone();
     h1->Multiply( h2 );
+
+    if ( is_enabled_normalize_cross_section ) {
+	auto integ = h1->Integral();
+	if ( integ!=0.0 )
+	    h1->Scale( (double)1/integ );
+    }
     
     sbp_image->Add( h1 );
     

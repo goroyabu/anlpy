@@ -11,6 +11,7 @@
 #include "Extract2Photon.hpp"
 #include "Project2Photon3D.hpp"
 #include "Iterate2Photon3D.hpp"
+#include "PETimager.hpp"
 
 #include <pybind11/pybind11.h>
 
@@ -83,6 +84,19 @@ PYBIND11_MODULE(ccana, m) {
 	.def("DefineParameter", &Iterate2Photon3D::define_parameter<std::string>)
 	.def("ShowParameter", &Iterate2Photon3D::show_parameters);
 
+    pybind11::class_<PETimager, anl::VANL_Module>(m, "PETimager")
+	.def(pybind11::init<>())
+	.def("SetParameter", &PETimager::set_parameter<int>)
+	.def("SetParameter", &PETimager::set_parameter<double>)
+	.def("SetParameter", &PETimager::set_parameter<bool>)
+	.def("SetParameter", &PETimager::set_parameter<std::string>)
+	.def("DefineParameter", &PETimager::define_parameter<int>)
+	.def("DefineParameter", &PETimager::define_parameter<double>)
+	.def("DefineParameter", &PETimager::define_parameter<bool>)
+	.def("DefineParameter", &PETimager::define_parameter<std::string>)
+	.def("ShowParameter", &PETimager::show_parameters);
+
+    
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;
 #else

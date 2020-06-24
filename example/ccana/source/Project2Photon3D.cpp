@@ -57,11 +57,19 @@ Project2Photon3D::Project2Photon3D()
 
     define_parameter<int>("use_si_energy_only", 0);
     define_parameter<int>("event_list_only", 0);
+    define_parameter<int>("enable_normalize_cone", 1);
+    define_parameter<int>("reject_fluor_at_first", 1);
+    define_parameter<int>("use_fluor_event", 0);
     
     projectors[1] = new ProjectCone3D();
     projectors[1]->set_parameter<std::string>("copyid", "cc1");
     projectors[2] = new ProjectCone3D();
-    projectors[2]->set_parameter<std::string>("copyid", "cc2");    
+    projectors[2]->set_parameter<std::string>("copyid", "cc2");
+
+    h1_si_cc1_peak1 = nullptr;
+    h1_si_cc1_peak2 = nullptr;
+    h1_si_cc2_peak1 = nullptr;
+    h1_si_cc2_peak2 = nullptr;    
 }
 Project2Photon3D::~Project2Photon3D()
 {
@@ -87,7 +95,7 @@ int Project2Photon3D::mod_bgnrun()
     projectors[2]->set_parameter<std::string>("output_file", output_file2);
     projectors[2]->set_parameter<std::string>("output_tree", output_tree2);
     
-    auto pname_int = { "nbins_1axis", "event_list_only" };
+    auto pname_int = { "nbins_1axis", "event_list_only", "enable_normalize_cone" };
     auto pname_double = { "axis_minimum", "axis_maximum",
 			  "cone_thick_deg",
 			  "distance_index", "e_threshold_si", "e_threshold_cdte",
@@ -98,6 +106,10 @@ int Project2Photon3D::mod_bgnrun()
 
     projectors[1]->set_parameter("rotation_around_vertical_deg", 0.0);
     projectors[2]->set_parameter("rotation_around_vertical_deg", 180.0);
+
+    auto reject_fluor_at_first = get_parameter<int>("reject_fluor_at_first");
+    use_fluor_event = get_parameter<int>("use_fluor_event");
+    if ( use_fluor_event ) reject_fluor_at_first = false;
     
     for ( auto cc : projectors ) {
 
@@ -110,7 +122,8 @@ int Project2Photon3D::mod_bgnrun()
 
 	cc.second->set_parameter<double>( "e_window_begin", get_parameter<double>("e_rough_window_begin") );
 	cc.second->set_parameter<double>( "e_window_end", get_parameter<double>("e_rough_window_end") );
-
+	cc.second->set_parameter<int>("enable_reject_fluor", reject_fluor_at_first);
+	
 	cc.second->show_parameters();
     }        
     
@@ -135,6 +148,19 @@ int Project2Photon3D::mod_bgnrun()
     h2_energy_cc2 = new TH2D( "h2_energy_cc2", "Energy on CC2;CdTe(keV);Si(keV)",
 			      1000, -0.5, 999.5, 1000, -0.5, 999.5 ); 
 
+    h1_delta_t_2photon = new TH1D( "h1_delta_t_2photon",
+				   "2 Photon Event;#Delta_msec_counter",
+				   200, -100, 100 );
+
+    h1_si_cc1_peak1 = new TH1D( "h1_si_cc1_peak1", "E_Si on CC1 when E_tot=peak1;keV",
+				1000, -0.5, 999.5 ); 
+    h1_si_cc1_peak2 = new TH1D( "h1_si_cc1_peak2", "E_Si on CC1 when E_tot=peak2;keV",
+				1000, -0.5, 999.5 ); 
+    h1_si_cc2_peak1 = new TH1D( "h1_si_cc2_peak1", "E_Si on CC2 when E_tot=peak1;keV",
+				1000, -0.5, 999.5 );     
+    h1_si_cc2_peak2 = new TH1D( "h1_si_cc2_peak2", "E_Si on CC2 when E_tot=peak2;keV",
+				1000, -0.5, 999.5 ); 
+
     e1_peak_energy = get_parameter<double>("e1_peak_energy");
     e2_peak_energy = get_parameter<double>("e2_peak_energy");
     e1_window_begin = get_parameter<double>("e1_window_begin");
@@ -146,9 +172,11 @@ int Project2Photon3D::mod_bgnrun()
     use_si_energy_only = get_parameter<int>("use_si_energy_only");
     is_event_list_only = get_parameter<int>("event_list_only");
     
+    
     evs::define("Coincidece events in time window");
     evs::define("SC-2hits and SC-2hits coincidence");
-    evs::define("Coincidece events in theta range");
+    evs::define("Scattering angle is in theta range");
+    evs::define("Si hit is not fluor of CdTe");
     evs::define("CC1 in E-range1 and CC2 in E-range2");
     evs::define("CC1 in E-range2 and CC2 in E-range1");
 
@@ -178,13 +206,15 @@ int Project2Photon3D::mod_ana()
 	return anl::ANL_LOOP;
     }
     
-    if ( time_window<fabs(delta_t1) ) return anl::ANL_SKIP;
-    evs::set("Coincidece events in time window");
+    // if ( time_window<fabs(delta_t1) ) return anl::ANL_SKIP;
+    if ( time_window>=fabs(delta_t1) )
+	evs::set("Coincidece events in time window");
     
     if ( si1.Energy()<=0.0 || cdte1.Energy()<=0.0 ) return anl::ANL_SKIP;
     if ( si2.Energy()<=0.0 || cdte2.Energy()<=0.0 ) return anl::ANL_SKIP;
-    
-    evs::set("SC-2hits and SC-2hits coincidence");
+
+    if ( evs::is_set("Coincidece events in time window") )
+	evs::set("SC-2hits and SC-2hits coincidence");
     
     auto energy1 = si1.Energy() + cdte1.Energy();
     auto energy2 = si2.Energy() + cdte2.Energy();
@@ -193,32 +223,49 @@ int Project2Photon3D::mod_ana()
     h1_energy_cc1->Fill( energy1 );
     h1_energy_cc2->Fill( energy2 );
     
-    h2_energy_cc1->Fill( si1.Energy(), cdte1.Energy() );
-    h2_energy_cc2->Fill( si2.Energy(), cdte2.Energy() );
+    h2_energy_cc1->Fill( cdte1.Energy(), si1.Energy() );
+    h2_energy_cc2->Fill( cdte2.Energy(), si2.Energy() );
 
     if ( !projectors[1]->is_in_theta_range( si1, cdte1 ) ) 
 	return anl::ANL_SKIP;
     if ( !projectors[2]->is_in_theta_range( si2, cdte2 ) ) 
-	return anl::ANL_SKIP;        
-    evs::set("Coincidece events in theta range");
+	return anl::ANL_SKIP;
+    if ( evs::is_set("Coincidece events in time window") )
+	evs::set("Scattering angle is in theta range");
+
+    if ( ProjectCone3D::is_fluor( si1.Energy() ) && use_fluor_event==false ) return anl::ANL_SKIP;
+    if ( ProjectCone3D::is_fluor( si2.Energy() ) && use_fluor_event==false ) return anl::ANL_SKIP;
+    if ( evs::is_set("Coincidece events in time window") )
+	evs::set("Si hit is not fluor of CdTe");
     
     if ( is_in_energy_range1(energy1) && is_in_energy_range2(energy2) ) {
-	evs::set("CC1 in E-range1 and CC2 in E-range2");
+	if ( evs::is_set("Coincidece events in time window") ) {
+	    evs::set("CC1 in E-range1 and CC2 in E-range2");
+	}
+	h1_si_cc1_peak1->Fill( si1.e );
+	h1_si_cc2_peak2->Fill( si2.e );
+	
 	if ( use_si_energy_only && !is_event_list_only ) {
 	    cdte1.e = e1_peak_energy - si1.e;
 	    cdte2.e = e2_peak_energy - si2.e;
 	}
     }
     else if ( is_in_energy_range2(energy1) && is_in_energy_range1(energy2) ) {
-	evs::set("CC1 in E-range2 and CC2 in E-range1");
+	if ( evs::is_set("Coincidece events in time window") ) {
+	    evs::set("CC1 in E-range2 and CC2 in E-range1");
+	}
+	h1_si_cc1_peak2->Fill( si1.e );
+	h1_si_cc2_peak1->Fill( si2.e );
+	
 	if ( use_si_energy_only && !is_event_list_only ) {
 	    cdte1.e = e2_peak_energy - si1.e;
 	    cdte2.e = e1_peak_energy - si2.e;
 	}
     }
     else return anl::ANL_SKIP;
-    
-    // auto [ si2_new, cdte2_new ] = convert_coordinate( 2, si2, cdte2 );
+
+    h1_delta_t_2photon->Fill( delta_t1 );
+    if ( time_window<fabs(delta_t1) ) return anl::ANL_SKIP;    
     
     if ( !is_event_list_only ) {	
 	auto is_filled_cc1 = projectors[1]->projection( si1, cdte1 );
@@ -282,6 +329,12 @@ int Project2Photon3D::mod_endrun()
     h1_energy_cc2->Write();
     h2_energy_cc1->Write();
     h2_energy_cc2->Write();
+    h1_delta_t_2photon->Write();
+
+    h1_si_cc1_peak1->Write();
+    h1_si_cc1_peak2->Write();
+    h1_si_cc2_peak1->Write();
+    h1_si_cc2_peak2->Write();
     
     return anl::ANL_OK;
 }

@@ -108,6 +108,7 @@ protected:
     TFile * output_file;
     TTree * output_tree;
     TH3F * image;
+    TH1D * h1_cone_filling_ratio;
 
     /** parameters */
     double cone_thick_rad;
@@ -121,6 +122,8 @@ protected:
     double detector_z_position;
     bool is_event_list_only;
     double rotation_around_vertical_deg;
+    bool enable_reject_fluor;
+    bool enable_normalize_cone;
     
     hittree_event event;
     
@@ -156,7 +159,9 @@ public:
     bool next() { return event.next(); }
     std::tuple<hit, hit> get_sc2hit_event();
     bool projection(TH3F* image, const hit& si, const hit& cdte);
-
+    TH1D* cone_filling_ratio
+    (TH3F* image, const TVector3& scat, const TVector3& abso, double scat_angle_deg);
+    
     inline bool projection(const hit& si, const hit& cdte)
     {
 	return projection(image, si, cdte);
@@ -184,17 +189,21 @@ public:
 	if ( 0<theta && theta<=theta_max_degree ) return true;
 	return false;
     }
-    inline bool is_fluor(double energy)
+    static inline bool is_fluor(double energy)
     {
 	// return false;
 	return 21.0<energy && energy<=28.0;
     }
+    inline bool is_rejected_as_fluor(double energy)
+    {
+	return is_fluor(energy) && enable_reject_fluor;
+    }
     
-    inline bool is_si(int detid)
+    static inline bool is_si(int detid)
     {
 	return detid==0 || detid==1;
     }
-    inline bool is_cdte(int detid)
+    static inline bool is_cdte(int detid)
     {
 	return detid==10 || detid==11 || detid==12;
     }
@@ -220,6 +229,29 @@ public:
 	return std::make_tuple( event.coin_eventid, event.coin_delta_t );
     }
 
+    inline bool is_in_image( TH3F* image, const TVector3& vec)
+    {
+	auto x = image->GetXaxis()->GetXmin() <= vec.X() &&
+	    vec.X() <= image->GetXaxis()->GetXmax();
+
+	auto y = image->GetYaxis()->GetXmin() <= vec.Y() &&
+	    vec.Y() <= image->GetYaxis()->GetXmax();
+
+	auto z = image->GetZaxis()->GetXmin() <= vec.Z() &&
+	    vec.Z() <= image->GetZaxis()->GetXmax();
+
+	return x && y && z;
+    }
+    inline double get_bin_content(TH1D* h, double x)
+    {
+	auto bin = h->GetXaxis()->FindBin(x);
+	if ( 1 <= bin && bin <= h->GetXaxis()->GetNbins() )	
+	    return h->GetBinContent(bin);
+	return 0.0;
+    }
+
+    double scale_by_filling_ratio(TH3F* th3, TH1D* ratio);
+    
 private:
     int define_branch(TTree* tree);
    
