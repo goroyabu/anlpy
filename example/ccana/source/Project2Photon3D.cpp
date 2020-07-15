@@ -46,7 +46,20 @@ Project2Photon3D::Project2Photon3D()
     define_parameter<double>("axis_maximum", 25.0);
     define_parameter<double>("theta_max_degree", 150.0);
     define_parameter<double>("detector_z_position", -41.0);
+    define_parameter<double>("detector_z_offset_cam2", -5.0);
 
+    define_parameter<int>("xaxis_nbins", 140);
+    define_parameter<double>("xaxis_minimum", -35.0);
+    define_parameter<double>("xaxis_maximum", 35.0);
+
+    define_parameter<int>("yaxis_nbins", 140);
+    define_parameter<double>("yaxis_minimum", -35.0);
+    define_parameter<double>("yaxis_maximum", 35.0);
+
+    define_parameter<int>("zaxis_nbins", 40);
+    define_parameter<double>("zaxis_minimum", -10.0);
+    define_parameter<double>("zaxis_maximum", 10.0);
+    
     define_parameter<double>("e1_peak_energy", 171.3);
     define_parameter<double>("e2_peak_energy", 245.4);
     define_parameter<double>("e1_window_begin", 160);
@@ -60,6 +73,7 @@ Project2Photon3D::Project2Photon3D()
     define_parameter<int>("enable_normalize_cone", 1);
     define_parameter<int>("reject_fluor_at_first", 1);
     define_parameter<int>("use_fluor_event", 0);
+
     
     projectors[1] = new ProjectCone3D();
     projectors[1]->set_parameter<std::string>("copyid", "cc1");
@@ -95,17 +109,26 @@ int Project2Photon3D::mod_bgnrun()
     projectors[2]->set_parameter<std::string>("output_file", output_file2);
     projectors[2]->set_parameter<std::string>("output_tree", output_tree2);
     
-    auto pname_int = { "nbins_1axis", "event_list_only", "enable_normalize_cone" };
+    auto pname_int = { "nbins_1axis", "event_list_only", "enable_normalize_cone", "xaxis_nbins", "yaxis_nbins", "zaxis_nbins" };
     auto pname_double = { "axis_minimum", "axis_maximum",
 			  "cone_thick_deg",
-			  "distance_index", "e_threshold_si", "e_threshold_cdte",
-			  "theta_max_degree", "detector_z_position" };
+			  "distance_index",
+			  "e_threshold_si", "e_threshold_cdte",
+			  "theta_max_degree",
+			  "xaxis_minimum", "xaxis_maximum",
+			  "yaxis_minimum", "yaxis_maximum",
+			  "zaxis_minimum", "zaxis_maximum" };
 
     cout << "  ----- Parameters of ProjectCone3D modules in Project2Photon3D ----- ";
     cout << endl;
 
     projectors[1]->set_parameter("rotation_around_vertical_deg", 0.0);
     projectors[2]->set_parameter("rotation_around_vertical_deg", 180.0);
+
+    auto detz_cc1 = get_parameter<double>("detector_z_position");
+    auto detz_cc2 = detz_cc1 + get_parameter<double>("detector_z_offset_cam2");
+    projectors[1]->set_parameter("detector_z_position", detz_cc1);
+    projectors[2]->set_parameter("detector_z_position", detz_cc2);
 
     auto reject_fluor_at_first = get_parameter<int>("reject_fluor_at_first");
     use_fluor_event = get_parameter<int>("use_fluor_event");

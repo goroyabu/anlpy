@@ -12,6 +12,7 @@ using std::cout;
 using std::endl;
 
 #include <TChain.h>
+#include <TChainElement.h>
 
 #include <bnk.hpp>
 #include <evs.hpp>
@@ -28,6 +29,9 @@ IterateCone3D::IterateCone3D()
     define_parameter<int>("n_of_iterations", 0);
     define_parameter<double>("denominator_offset", 10.0);
     define_parameter<int>("eventid", -1);
+
+    define_parameter<int>("last_entry", -1);
+    define_parameter<int>("first_entry", 0);
 }
 IterateCone3D::~IterateCone3D()
 {
@@ -56,6 +60,14 @@ int IterateCone3D::mod_bgnrun()
 	cout << input_tree_name << " is not found in " << input_file_name << endl;
 	return anl::ANL_NG;
     }    
+
+    int ifile = 0;
+    auto list_of_files = chain->GetListOfFiles();
+    TIter next(list_of_files);
+    TChainElement * elem = 0;
+    while ( (elem = (TChainElement*)next() ) ) {
+	cout << "File" << ifile << " : " << elem->GetTitle() << endl;
+    }    
     
     // auto nentries = event.set_branch_address(input_tree);
     auto nentries = event.set_branch_address( chain );
@@ -82,6 +94,10 @@ int IterateCone3D::mod_bgnrun()
     denominator_offset = get_parameter<double>("denominator_offset");
     eventid = get_parameter<int>("eventid");
     current_entry = -1;
+
+    auto first_entry = get_parameter<int>("first_entry");
+    auto last_entry = get_parameter<int>("last_entry");
+    event.set_entry_range(first_entry, last_entry);
     
     return anl::ANL_OK;
 }

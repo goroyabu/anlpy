@@ -121,7 +121,8 @@ protected:
     double theta_max_degree;
     double detector_z_position;
     bool is_event_list_only;
-    double rotation_around_vertical_deg;
+    // double rotation_around_vertical_deg;
+    double rotation_around_vertical_rad;
     bool enable_reject_fluor;
     bool enable_normalize_cone;
     

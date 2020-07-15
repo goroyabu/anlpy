@@ -157,7 +157,10 @@ int ReadTTree::mod_endrun()
     // cout << mod_name2() << "::mod_endrun()";
     // cout << " -> Good Bye. :)" << endl;
 
+    auto inname = input_file->GetName();
     input_file->Close();
+
+    cout << inname << " is closed." << endl;
     
     return anl::ANL_OK;
 }

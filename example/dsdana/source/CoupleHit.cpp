@@ -7,6 +7,9 @@
 **/
 #include "CoupleHit.hpp"
 #include <algorithm>
+using std::cout;
+using std::cerr;
+using std::endl;
 
 #include <TDirectory.h>
 #include <TFile.h>
@@ -84,6 +87,7 @@ int CoupleHit::mod_endrun()
     // 	m_image->Write();
     // }
     //status = ANL_OK;
+    cout << "CoupleHit is closed." << endl;
     return anl::ANL_OK;
 }
 // void CoupleHit::mod_exit(int &status)

@@ -25,8 +25,21 @@ PETimager::PETimager()
     define_parameter<std::string>("input_file2", "input2.root");
     define_parameter<std::string>("output_file", "out.root");
     define_parameter<int>("time_window_clk", window);
+    define_parameter<int>("number_of_events", -1);
     define_parameter<double>("e_window_begin", ecut_bgn);
-    define_parameter<double>("e_window_end", ecut_end);    
+    define_parameter<double>("e_window_end", ecut_end);
+    define_parameter<double>("rotation_about_vertical_deg", 0.0);
+    define_parameter<double>("detector_z_position", 41.35);
+
+    define_parameter<int>("nbins_xaxis", 50);
+    define_parameter<int>("nbins_yaxis", 30);
+    define_parameter<int>("nbins_zaxis", 50);
+    define_parameter<double>("minimum_xaxis", -5.0);
+    define_parameter<double>("maximum_xaxis", 5.0);
+    define_parameter<double>("minimum_yaxis", -3.0);
+    define_parameter<double>("maximum_yaxis", 3.0);
+    define_parameter<double>("minimum_zaxis", -5.0);
+    define_parameter<double>("maximum_zaxis", 5.0);
 }
 PETimager::~PETimager()
 {
@@ -43,13 +56,23 @@ int PETimager::mod_bgnrun()
     outfile = new TFile( outname.c_str(), "recreate" );
     if ( !outfile || outfile->IsZombie() ) return anl::ANL_NG;
     
-    static const int nbins = 64;
+    static const int nbins = 50;
     //static const int nbins = 320;
-    static const double xmin = -16;
-    static const double xmax = 16;
-    
+    static const double xmax = 5;
+    static const double xmin = -xmax;
+
+    auto nbins_xaxis = get_parameter<int>("nbins_xaxis");
+    auto nbins_yaxis = get_parameter<int>("nbins_yaxis");
+    auto nbins_zaxis = get_parameter<int>("nbins_zaxis");
+    auto minimum_xaxis = get_parameter<double>("minimum_xaxis");
+    auto maximum_xaxis = get_parameter<double>("maximum_xaxis");
+    auto minimum_yaxis = get_parameter<double>("minimum_yaxis");
+    auto maximum_yaxis = get_parameter<double>("maximum_yaxis");
+    auto minimum_zaxis = get_parameter<double>("minimum_zaxis");
+    auto maximum_zaxis = get_parameter<double>("maximum_zaxis");
+
     image = new TH3F( "image", "image;X(mm);Y(mm);Z(mm)",
-		      nbins, xmin, xmax, nbins, xmin, xmax, nbins, xmin, xmax );
+		      nbins_xaxis, minimum_xaxis, maximum_xaxis, nbins_yaxis, minimum_yaxis, maximum_yaxis, nbins_zaxis, minimum_zaxis, maximum_zaxis );
     
     image2d = new TH2D( "image2d", "image2d;X(mm);Y(mm)",
 			nbins, xmin, xmax, nbins, xmin, xmax );
@@ -69,6 +92,12 @@ int PETimager::mod_bgnrun()
     ecut_bgn = get_parameter<double>("e_window_begin");
     ecut_end = get_parameter<double>("e_window_end");    
     if ( ecut_end <= ecut_bgn ) return anl::ANL_NG;
+
+    auto rotate_deg = get_parameter<double>("rotation_about_vertical_deg");
+    rotate_vertical = ROOT::Math::RotationY(rotate_deg*TMath::Pi()/180.0);
+    convert_cc2 = ROOT::Math::RotationY(TMath::Pi());
+    
+    detector_z_position = get_parameter<double>("detector_z_position");
     
     return anl::ANL_OK;
 }
@@ -78,6 +107,10 @@ int PETimager::mod_ana()
     auto nvoxels = image->GetNcells();
     auto npixels = image2d->GetNcells();
     auto nentries = set_reader(cc1, cc2);
+
+    auto number_of_events = get_parameter<int>("number_of_events");
+    if ( number_of_events>0 && number_of_events<nentries )
+	nentries = number_of_events;
     
     // const double distance_threshold = image->GetXaxis()->GetBinWidth(1)*0.5;
     const double distance_threshold = 0.250/2.35*3;
@@ -106,11 +139,11 @@ int PETimager::mod_ana()
 	    }
 	}
 	
+	// print_branch(cc1, cc2);
+	
 	//if ( !is_coincidence(cc1, cc2) ) continue;
-	if ( cc1->nhit_lv3==0 || cc1->nhit_lv3==0 ) continue;
-	
-	//print_branch(cc1, cc2);
-	
+	if ( cc1->nhit_lv3==0 || cc1->nhit_lv3==0 )  continue;	
+			
 	int index_1st_cc1 = cc1->nhit_lv3 - 1;
 	int index_1st_cc2 = cc2->nhit_lv3 - 1;
 	
@@ -122,14 +155,42 @@ int PETimager::mod_ana()
 	
 	auto p1 = ROOT::Math::XYZPoint( cc1->pos_x_lv3[index_1st_cc1],
 					cc1->pos_y_lv3[index_1st_cc1],
-					cc1->pos_z_lv3[index_1st_cc1] - 41.4 );
-	auto p2 = ROOT::Math::XYZPoint( -1*cc2->pos_x_lv3[index_1st_cc2],
+					cc1->pos_z_lv3[index_1st_cc1] - detector_z_position );
+	auto p2 = ROOT::Math::XYZPoint( cc2->pos_x_lv3[index_1st_cc2],
 					cc2->pos_y_lv3[index_1st_cc2],
-					-1*cc2->pos_z_lv3[index_1st_cc2] + 41.4 );
+					cc2->pos_z_lv3[index_1st_cc2] - detector_z_position );
+
+	// auto p2 = ROOT::Math::XYZPoint( -1*cc2->pos_x_lv3[index_1st_cc2],
+	// 				cc2->pos_y_lv3[index_1st_cc2],
+	// 				-1*cc2->pos_z_lv3[index_1st_cc2] + detector_z_position );
+
+	//auto p2_org = p2;
+	p1 = rotate_vertical( p1 );
+	p2 = rotate_vertical( p2 );
+	p2 = convert_cc2( p2 );	
+
+	// print_xyz(p1, "p1");
+	// print_xyz(p2_org, "p2_org");
+	// print_xyz(p2, "p2_rot");
+	
+	// auto p20r = rotate_vertical(p20);
+	// auto p202 = convert_cc2( p20 );
+	// //auto p12 = hit_position( cc1, index_1st_cc1 );
+	// auto p22 = hit_position( cc2, index_1st_cc2 );
+	// auto p23 = convert_cc2( hit_position( cc2, index_1st_cc2 ) );
+
+	// //print_xyz(p12, "p12");
+	// cout << endl;
+	// print_xyz(p20, "p20");
+	// print_xyz(p20r, "p20r");
+	// print_xyz(p202, "p202");
+	// print_xyz(p2, "p21");
+	// print_xyz(p22, "p22");
+	// print_xyz(p23, "p23");
+		
+	
 	
 	pet::line3d l(p1, p2);
-	//print_xyz(p1, "p1");
-	//print_xyz(p2, "p2");
 	
 	for ( int voxel=0; voxel<nvoxels; ++voxel ){
 	    //break;
@@ -141,7 +202,8 @@ int PETimager::mod_ana()
 	    
 	    if( distance<=distance_threshold ){			
 		auto content = image->GetBinContent(voxel);
-		content += 1.0/(distance*distance+1.0);
+		//content += 1.0/(distance*distance+1.0);
+		content += exp(-1.0*distance*distance);
 		image->SetBinContent(voxel, content);
 	    }
 	}
@@ -191,3 +253,13 @@ int PETimager::mod_endrun()
     return anl::ANL_OK;
 }
 
+ROOT::Math::XYZPoint PETimager::hit_position
+(pet::hittree_reader* cc, int index)
+{
+    auto x = cc1->pos_x_lv3[index];
+    auto y = cc1->pos_y_lv3[index];
+    auto z = cc1->pos_z_lv3[index] - detector_z_position;
+    
+    auto r = rotate_vertical( ROOT::Math::XYZPoint( x, y, z ) );
+    return r;
+}

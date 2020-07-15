@@ -34,9 +34,23 @@ ProjectCone3D::ProjectCone3D()
     define_parameter<double>("distance_index", 2.0);
     define_parameter<double>("e_threshold_si", 5.0);
     define_parameter<double>("e_threshold_cdte", 5.0);
+
     define_parameter<int>("nbins_1axis", 100);
     define_parameter<double>("axis_minimum", -25.0);
     define_parameter<double>("axis_maximum", 25.0);
+
+    define_parameter<int>("xaxis_nbins", 70);
+    define_parameter<double>("xaxis_minimum", -35.0);
+    define_parameter<double>("xaxis_maximum", 35.0);
+
+    define_parameter<int>("yaxis_nbins", 70);
+    define_parameter<double>("yaxis_minimum", -35.0);
+    define_parameter<double>("yaxis_maximum", 35.0);
+    
+    define_parameter<int>("zaxis_nbins", 40);
+    define_parameter<double>("zaxis_minimum", -10.0);
+    define_parameter<double>("zaxis_maximum", 10.0);
+    
     define_parameter<double>("theta_max_degree", 150.0);
     define_parameter<double>("detector_z_position", -41.0);
     define_parameter<int>("event_list_only", 0);
@@ -50,10 +64,10 @@ ProjectCone3D::~ProjectCone3D()
 
 int ProjectCone3D::mod_bgnrun()
 {
-    auto nbins = get_parameter<int>("nbins_1axis");
-    auto xmin = get_parameter<double>("axis_minimum");
-    auto xmax = get_parameter<double>("axis_maximum");
-
+    // auto nbins = get_parameter<int>("nbins_1axis");
+    // auto xmin = get_parameter<double>("axis_minimum");
+    // auto xmax = get_parameter<double>("axis_maximum");
+    
     // cout << "current_dir=" << gDirectory->GetName() << endl;
     
     auto ifname = get_parameter<std::string>("input_file");
@@ -103,13 +117,25 @@ int ProjectCone3D::mod_bgnrun()
     auto copyid = get_parameter<std::string>("copyid");
     is_event_list_only = get_parameter<int>("event_list_only");
 
+    auto x_nbins = get_parameter<int>("xaxis_nbins");
+    auto x_min   = get_parameter<double>("xaxis_minimum");
+    auto x_max   = get_parameter<double>("xaxis_maximum");
+    
+    auto y_nbins = get_parameter<int>("yaxis_nbins");
+    auto y_min   = get_parameter<double>("yaxis_minimum");
+    auto y_max   = get_parameter<double>("yaxis_maximum");
+    
+    auto z_nbins = get_parameter<int>("zaxis_nbins");
+    auto z_min   = get_parameter<double>("zaxis_minimum");
+    auto z_max   = get_parameter<double>("zaxis_maximum");
+    
     if ( !is_event_list_only ) {
 	image = new TH3F( (TString)"response"+copyid.c_str(),
 			  "response;X(mm);Y(mm);Z(mm)",
-			  nbins, xmin, xmax, nbins, xmin, xmax, nbins, xmin, xmax );
+			  x_nbins, x_min, x_max, y_nbins, y_min, y_max, z_nbins, z_min, z_max );
 	h1_cone_filling_ratio
 	    = new TH1D( (TString)"cone_filling_ratio_"+copyid.c_str(),
-			"cone_filling_ratio;Z(mm)", nbins, xmin, xmax );
+			"cone_filling_ratio;Z(mm)", z_nbins, z_min, z_max );
     }
     
     if ( define_branch( output_tree )!=anl::ANL_OK ) return anl::ANL_NG;
@@ -128,9 +154,13 @@ int ProjectCone3D::mod_bgnrun()
     e_threshold_cdte = get_parameter<double>("e_threshold_cdte");
     theta_max_degree = get_parameter<double>("theta_max_degree");
     detector_z_position = get_parameter<double>("detector_z_position");
-    
-    rotation_around_vertical_deg
-	= get_parameter<double>("rotation_around_vertical_deg");
+
+    auto deg = get_parameter<double>("rotation_around_vertical_deg");
+
+    if ( deg!=0.0 )
+	rotation_around_vertical_rad = deg/180.0*TMath::Pi();
+    else
+	rotation_around_vertical_rad = 0.0;
 
     enable_reject_fluor = get_parameter<int>("enable_reject_fluor");
     enable_normalize_cone = get_parameter<int>("enable_normalize_cone");
@@ -422,11 +452,17 @@ std::tuple<ProjectCone3D::hit, ProjectCone3D::hit> ProjectCone3D::get_sc2hit_eve
 	}	
     }    
 
-    if ( rotation_around_vertical_deg ) {
-	cdte.x = -1.0 * cdte.x;
-	cdte.z = -1.0 * cdte.z;
-	si.x = -1.0 * si.x;
-	si.z = -1.0 * si.z;
+    if ( rotation_around_vertical_rad!=0.0 ) {
+	
+	TVector3 cdte_pos(cdte.x, cdte.y, cdte.z);
+	cdte_pos.RotateY( rotation_around_vertical_rad );
+	
+	TVector3 si_pos(si.x, si.y, si.z);
+	si_pos.RotateY( rotation_around_vertical_rad );
+	// cdte.x = -1.0 * cdte.x;
+	// cdte.z = -1.0 * cdte.z;
+	// si.x = -1.0 * si.x;
+	// si.z = -1.0 * si.z;
     }
     
     num_hits = n_si + n_cdte;

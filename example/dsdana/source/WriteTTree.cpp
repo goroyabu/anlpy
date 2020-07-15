@@ -95,10 +95,12 @@ int WriteTTree::mod_endrun()
     // ifs.close(); // std::ifstream
 
     // cout << "WriteTTree::mod_endrun" << endl;
+    auto outname =  output_file->GetName();
     output_file->cd();
     output_tree->Write();
     output_file->Close();
     // cout << "WT end" << endl;
+    cout << outname << " is closed" << endl;
     
     return anl::ANL_OK;
 }

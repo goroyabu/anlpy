@@ -18,8 +18,10 @@
 #include <Math/Vector3Dfwd.h>
 #include <Math/Point3Dfwd.h>
 #include <Math/Plane3D.h>
+#include <Math/RotationY.h>
 
 #include <TSystem.h>
+#include <TMath.h>
 #include <TFile.h>
 #include <TTree.h>
 #include <TH3F.h>
@@ -164,6 +166,10 @@ private:
     int window;
     double ecut_bgn;
     double ecut_end;
+    //double rotation_about_vertical_deg;
+    ROOT::Math::RotationY rotate_vertical;
+    ROOT::Math::RotationY convert_cc2;
+    double detector_z_position;    
     
 public:
     TH3F * image;
@@ -260,6 +266,9 @@ public:
 	const static double c = -0.5 / sigma / sigma;	    
 	return a * std::exp( c * d * d );
     }
+
+    ROOT::Math::XYZPoint hit_position
+    (pet::hittree_reader* cc, int index);
     
 };
 

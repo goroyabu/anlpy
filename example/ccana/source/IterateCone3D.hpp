@@ -35,6 +35,9 @@ public:
 	TTree * tree;
 	long nentries;
 	long current_entry;
+
+	long first_entry;
+	long last_entry;
 	
 	TH3F * response;
 	resptree_event()
@@ -43,6 +46,7 @@ public:
 	    response = new TH3F();
 	    nentries = 0;
 	    current_entry = -1;
+	    set_entry_range(0,-1);
 	}
 	~resptree_event() {}
 
@@ -54,10 +58,28 @@ public:
 	    if ( nentries>0 ) tree->GetEntry(0);
 	    return nentries;
 	}
+
+	void set_entry_range(long first, long last)
+	{
+	    if ( last<0 || nentries<last ) last = nentries;
+	    if ( 0<first ) first = 0;
+
+	    if ( first < last ) {
+		first_entry = first;
+		last_entry = last;
+		return;
+	    }
+	    
+	    first_entry = 0;
+	    last_entry = nentries;
+	}
+	
 	bool next()
 	{
 	    ++current_entry;
-	    if ( current_entry>=nentries ) return false;
+
+	    if ( current_entry>=last_entry ) return false;
+	    // if ( current_entry>=nentries ) return false;
 	    tree->GetEntry(current_entry);
 
 	    if ( current_entry%100==0 ) {
@@ -66,10 +88,12 @@ public:
 	    
 	    return true;
 	}
-	bool init_entry()
+	bool init_entry()	    
 	{
-	    current_entry = -1;
-	    if ( nentries>0 ) tree->GetEntry(0);
+	    //if ( nentries<=first ) first = 0;
+	    current_entry = first_entry-1;
+	    //if ( nentries>first ) tree->GetEntry(first);
+	    tree->GetEntry(first_entry);
 	    return true;
 	}
     };

@@ -126,30 +126,32 @@ int MergeAdjacent::mod_endrun()
 {
     // m_multipli_his->Write();
 
-    if ( !gDirectory->IsWritable() )
-	return anl::ANL_OK;
+    // if ( !gDirectory->IsWritable() )
+    // 	return anl::ANL_OK;
 
-    auto dir = gDirectory->mkdir("his_MergeAdjacent");
-    if ( !dir ) return anl::ANL_OK;    
+    // auto dir = gDirectory->mkdir("his_MergeAdjacent");
+    // if ( !dir ) return anl::ANL_OK;    
     
-    dir->cd();
-    for ( auto mp : list_of_h2_multi_lv1 ) {
-	mp.second->GetXaxis()->SetRangeUser(0, 10);
-	mp.second->GetYaxis()->SetRangeUser(0, 10);
-	mp.second->Write();
-    }
-    for ( auto mp : list_of_h2_multi_lv2a ) {
-	mp.second->GetXaxis()->SetRangeUser(0, 10);
-	mp.second->GetYaxis()->SetRangeUser(0, 10);	
-	mp.second->Write();
-    }
-    for ( auto mp : list_of_h2_multi_lv2b ) {
-	mp.second->GetXaxis()->SetRangeUser(0, 10);
-	mp.second->GetYaxis()->SetRangeUser(0, 10);	
-	mp.second->Write();
-    }
+    // dir->cd();
+    // for ( auto mp : list_of_h2_multi_lv1 ) {
+    // 	mp.second->GetXaxis()->SetRangeUser(0, 10);
+    // 	mp.second->GetYaxis()->SetRangeUser(0, 10);
+    // 	mp.second->Write();
+    // }
+    // for ( auto mp : list_of_h2_multi_lv2a ) {
+    // 	mp.second->GetXaxis()->SetRangeUser(0, 10);
+    // 	mp.second->GetYaxis()->SetRangeUser(0, 10);	
+    // 	mp.second->Write();
+    // }
+    // for ( auto mp : list_of_h2_multi_lv2b ) {
+    // 	mp.second->GetXaxis()->SetRangeUser(0, 10);
+    // 	mp.second->GetYaxis()->SetRangeUser(0, 10);	
+    // 	mp.second->Write();
+    // }
 
-    dir->cd("..");
+    // dir->cd("..");
+
+    cout << "MergeAdjacent is closed." << endl;
     return anl::ANL_OK;
 }
 int MergeAdjacent::bnkDefAll()

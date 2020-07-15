@@ -245,6 +245,7 @@ int ApplyDatabase::mod_endrun()
     // m_spectall->Write();
     // m_multi_hist->Write();
     // status = anlcross::ANL_OK;
+    cout << "ApplyDatabase is closed." << endl;
     return anl::ANL_OK;
 }
 // void ApplyDatabase::mod_exit(int &status)
