@@ -125,12 +125,14 @@ protected:
     double denominator_offset;
     int eventid;
     int current_entry;
+    bool is_enabled_multiple_thread;
+    int n_threads;
     
     TH3F* next_image(TH3F* previous_image);
 
-    using vector1 = std::vector<double>;
-    using vector2 = std::vector<std::vector<double>>;
-    using vector3 = std::vector<std::vector<std::vector<double>>>;
+    using vector1 = std::vector<float>;
+    using vector2 = std::vector<vector1>;
+    using vector3 = std::vector<vector2>;
 
     vector3 make_vector3(int x, int y, int z, double value);
 
@@ -165,7 +167,7 @@ protected:
 
     static void v2v_modify_element
     (const vector3& in, vector3* out, int x1, int x2, int ny, int nz,
-     std::function<void(const double, double*)> func);
+     std::function<void(const float, float*)> func);
 
 };
 
