@@ -125,6 +125,15 @@ protected:
     int current_entry;
     
     TH3F* next_image(TH3F* previous_image);
+
+    using vector3 = std::vector<std::vector<std::vector<double>>>;
+    
+    void get_elements(TH3F* th3, vector3* out);
+    void add_elements(const vector3& in, TH3F* th3);
+    double get_integral(const vector3& in);
+    void copy_elements(const vector3& in, vector3* out);
+    void scale_elements(double factor, vector3* out);
+    void multiply_elements(const vector3& in, vector3* out);
 };
 
 #endif

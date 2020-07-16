@@ -170,6 +170,111 @@ int IterateCone3D::mod_endrun()
     return anl::ANL_OK;
 }
 
+
+void IterateCone3D::get_elements
+(TH3F* th3, vector3* out)
+{
+    auto nx = th3->GetXaxis()->GetNbins();
+    auto ny = th3->GetYaxis()->GetNbins();
+    auto nz = th3->GetZaxis()->GetNbins();
+    
+    (*out).resize(nx);
+    for ( auto v2d : *out ) {
+    	v2d.resize(ny);
+    	for ( auto v1d : v2d ) v1d.resize(nz);
+    }    
+    
+    for ( int x=1; x<=nx; ++x ) {
+	for ( int y=1; y<=ny; ++y ) {
+	    for ( int z=1; z<=nz; ++z ) {
+		(*out)[x-1][y-1][z-1] = th3->GetBinContent(x,y,z);
+	    }
+	}
+    }
+}
+
+void IterateCone3D::add_elements
+(const vector3& in, TH3F* th3)
+{
+    auto nx = (int)in.size();//th3->GetXaxis()->GetNbins();
+    if ( nx==0 ) return;
+    auto ny = (int)in[0].size();//th3->GetYaxis()->GetNbins();
+    if ( ny==0 ) return;
+    auto nz = (int)in[0][0].size();//th3->GetZaxis()->GetNbins();
+    
+    // (*out).resize(nx);
+    // for ( auto v2d : *out ) {
+    // 	v2d.resize(ny);
+    // 	for ( auto v1d : v2d ) v1d.resize(nz);
+    // }    
+    
+    for ( int x=1; x<=nx; ++x ) {
+	for ( int y=1; y<=ny; ++y ) {
+	    for ( int z=1; z<=nz; ++z ) {		
+		th3->SetBinContent
+		    ( x, y, z,
+		      in[x-1][y-1][z-1] + th3->GetBinContent(x,y,z) );
+	    }
+	}
+    }
+}
+
+
+double IterateCone3D::get_integral(const vector3& in)
+{
+    double sum = 0.0;
+    for ( auto v2 : in )
+	for ( auto v1 : v2 )
+	    for ( auto elem : v1 ) sum += elem;		
+    return sum;
+}
+
+void IterateCone3D::copy_elements(const vector3& in, vector3* out)
+{
+    auto nx = (int)(*out).size();
+    if ( nx==0 ) return;
+    // if ( nx==0 || nx!=(int)in.size() ) return;
+    auto ny = (int)(*out)[0].size();
+    if ( ny==0 ) return;
+    // if ( ny==0 || ny!=(int)in[0].size() ) return;
+    auto nz = (int)(*out)[0][0].size();
+    if ( nz==0 ) return;
+    // if ( nz==0 || nz!=(int)in[0][0].size() ) return;
+
+    (*out).resize(nx);
+    for ( auto x=0; x<nx; ++x ) {
+	(*out)[x].resize(ny);
+	for ( auto y=0; y<ny; ++y ) {
+	    (*out)[x][y].resize(nz);
+	    for ( auto z=0; z<nz; ++z ) {
+		(*out)[x][y][z] = in[x][y][z];
+	    }
+	}
+    }
+}
+
+void IterateCone3D::scale_elements(double factor, vector3* out)
+{
+    for ( auto v2 : *out )
+	for ( auto v1 : v2 )
+	    for ( auto elem : v1 ) elem = elem*factor;
+}
+
+void IterateCone3D::multiply_elements(const vector3& in, vector3* out)
+{
+    auto nx = (int)(*out).size();
+    if ( nx==0 || nx!=(int)in.size() ) return;
+    auto ny = (int)(*out)[0].size();
+    if ( ny==0 || ny!=(int)in[0].size() ) return;
+    auto nz = (int)(*out)[0][0].size();
+    if ( nz==0 || nz!=(int)in[0][0].size() ) return;
+    
+    for ( auto x=0; x<nx; ++x )
+	for ( auto y=0; y<ny; ++y )
+	    for ( auto z=0; z<nz; ++z )
+		(*out)[x][y][z] *= in[x][y][z];    
+}
+
 TH3F* IterateCone3D::next_image(TH3F* previous_image)
 {
     // vector_integral_of_multiple.clear();
@@ -180,26 +285,39 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
     
     long current_entry = -1;
     event.init_entry();
+
+    vector3 prev_elems;//define_vector( nbinsx, nbinsy, nbinsz );
+    get_elements( previous_image, &prev_elems );
+
+    vector3 temp_elems, temp2_elems;
     
     while ( event.next() ) {
 	
 	++current_entry;
-
-	auto multiple = (TH3F*)event.response->Clone();
-	multiple->Multiply( previous_image );
-
-	auto integral = multiple->Integral();
+	
+	get_elements( (TH3F*)event.response->Clone(), &temp_elems );
+	copy_elements( temp_elems, &temp2_elems );
+	
+	multiply_elements( prev_elems, &temp_elems );
+	//auto multiple = (TH3F*)event.response->Clone();
+	//multiple->Multiply( previous_image );
+	
+	auto integral = get_integral( temp_elems );
+	// auto integral = multiple->Integral();
 	// vector_integral_of_multiple.emplace_back( integral );
 
-	auto tempo = (TH3F*)event.response->Clone();
-	tempo->Scale( vector_integral_of_response[ current_entry ] /
-		      ( integral + denominator_offset ) );
-	
-	new_image->Add( tempo );
+	scale_elements( vector_integral_of_response[ current_entry ] /
+			( integral + denominator_offset ), &temp2_elems );
 
-	multiple->Delete();
-	tempo->Delete();
+	// auto tempo = (TH3F*)event.response->Clone();
+	// tempo->Scale( vector_integral_of_response[ current_entry ] /
+	// 	      ( integral + denominator_offset ) );
 	
+	// new_image->Add( tempo );
+	add_elements( temp2_elems, new_image );
+
+	// multiple->Delete();
+	// tempo->Delete();	
     }
     
     new_image->Multiply( previous_image );
