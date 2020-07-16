@@ -12,6 +12,8 @@
 
 #include <iostream>
 #include <thread>
+#include <utility>
+#include <vector>
 
 #include <TFile.h>
 #include <TTree.h>
@@ -127,6 +129,12 @@ protected:
     int current_entry;
     bool is_enabled_multiple_thread;
     int n_threads;
+
+    /* Histogram */
+    int nbins_xaxis, nbins_yaxis, nbins_zaxis;
+
+    /* Mutilple Thread */
+    std::vector<std::pair<int,int>> list_of_xbin_ranges;
     
     TH3F* next_image(TH3F* previous_image);
 

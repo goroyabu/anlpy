@@ -93,6 +93,10 @@ int IterateCone3D::mod_bgnrun()
     sbp_image->Reset();
     sbp_image->SetName("sbp_image");
 
+    nbins_xaxis = sbp_image->GetXaxis()->GetNbins();
+    nbins_yaxis = sbp_image->GetYaxis()->GetNbins();
+    nbins_zaxis = sbp_image->GetZaxis()->GetNbins();
+    
     n_of_iterations = get_parameter<int>("n_of_iterations");
 
     denominator_offset = get_parameter<double>("denominator_offset");
@@ -110,6 +114,23 @@ int IterateCone3D::mod_bgnrun()
     if ( n_threads>1 ) {
 	is_enabled_multiple_thread = true;
 	cout << "Multiple Thread Mode is enabled (N=" << n_threads << ")" << endl;
+    }
+
+    if ( is_enabled_multiple_thread ) {
+
+	int xdiv = nbins_xaxis/n_threads;
+	int xbgn = 0;
+	int xend = 0 + xdiv;
+	
+	for ( int ithre=0; ithre<n_threads-1; ++ithre ) { 
+	    list_of_xbin_ranges.emplace_back( std::make_pair(xbgn, xend) );
+	    xbgn = xend + 1;
+	    xend += xdiv;
+	}
+	if ( xbgn<nbins_xaxis-1) {
+	    list_of_xbin_ranges
+		.emplace_back( std::make_pair(xbgn, nbins_xaxis-1) );
+	}
     }
     
     return anl::ANL_OK;
@@ -238,14 +259,14 @@ IterateCone3D::vector3 IterateCone3D::make_vector3
 void IterateCone3D::h2v_get_elements
 (TH3F* th3, vector3* out)
 {
-    auto nx = th3->GetXaxis()->GetNbins();
-    auto ny = th3->GetYaxis()->GetNbins();
-    auto nz = th3->GetZaxis()->GetNbins();
+    // auto nx = th3->GetXaxis()->GetNbins();
+    // auto ny = th3->GetYaxis()->GetNbins();
+    // auto nz = th3->GetZaxis()->GetNbins();
     
-    (*out).resize(nx);
+    (*out).resize(nbins_xaxis);
     for ( auto&& v2d : *out ) {
-    	v2d.resize(ny);
-    	for ( auto&& v1d : v2d ) v1d.resize(nz);
+    	v2d.resize(nbins_yaxis);
+    	for ( auto&& v1d : v2d ) v1d.resize(nbins_zaxis);
     }    
 
     // //     cout << (*out).size() << endl;
@@ -254,9 +275,9 @@ void IterateCone3D::h2v_get_elements
     // cout << "copy for elements" << endl;
     
     if ( is_enabled_multiple_thread==false ) {
-	for ( int x=1; x<=nx; ++x ) {
-	    for ( int y=1; y<=ny; ++y ) {
-		for ( int z=1; z<=nz; ++z ) {
+	for ( int x=1; x<=nbins_xaxis; ++x ) {
+	    for ( int y=1; y<=nbins_yaxis; ++y ) {
+		for ( int z=1; z<=nbins_zaxis; ++z ) {
 		    (*out)[x-1][y-1][z-1] = th3->GetBinContent(x,y,z);
 		}
 	}
@@ -268,19 +289,27 @@ void IterateCone3D::h2v_get_elements
     	std::vector<std::thread> threads;
 	
     	// const int n_thread = 1;
-    	int nx_div = nx/n_threads;//static_cast<int>(nx/n_threads);
-    	int nx_bgn = 1;
-    	int nx_end = 1 + nx_div;
-    	for ( int thre=0; thre<n_threads-1; ++thre ) {
-    	    threads.emplace_back
-    		( std::thread( &h2v_get_elem_impl, th3, out, nx_bgn, nx_end, ny, nz) );
-    	    nx_bgn = nx_end + 1;
-    	    nx_end += nx_div;
-    	}
-    	threads.emplace_back
-    	    ( std::thread( &h2v_get_elem_impl, th3, out, nx_bgn, nx, ny, nz) );
+    	// int nx_div = nx/n_threads;//static_cast<int>(nx/n_threads);
+    	// int nx_bgn = 1;
+    	// int nx_end = 1 + nx_div;
+    	// for ( int thre=0; thre<n_threads-1; ++thre ) {
+    	//     threads.emplace_back
+    	// 	( std::thread( &h2v_get_elem_impl, th3, out, nx_bgn, nx_end, ny, nz) );
+    	//     nx_bgn = nx_end + 1;
+    	//     nx_end += nx_div;
+    	// }
+    	// threads.emplace_back
+    	//     ( std::thread( &h2v_get_elem_impl, th3, out, nx_bgn, nx, ny, nz) );
 
     	// cout << threads.size() << endl;
+	
+	for ( auto [ xbgn, xend ] : list_of_xbin_ranges ) {
+	    threads.emplace_back
+		( std::thread(&h2v_get_elem_impl,
+			      th3, out, xbgn+1, xend+1,
+			      nbins_yaxis, nbins_zaxis) );
+	}
+	
     	for( auto& thread : threads ) thread.join();    
 	
     }
@@ -288,9 +317,9 @@ void IterateCone3D::h2v_get_elements
 
 void IterateCone3D::h2v_add_elements(TH3F* th3, vector3* out)
 {
-    auto nx = th3->GetXaxis()->GetNbins();
-    auto ny = th3->GetYaxis()->GetNbins();
-    auto nz = th3->GetZaxis()->GetNbins();
+    auto nx = nbins_xaxis;//th3->GetXaxis()->GetNbins();
+    auto ny = nbins_yaxis;//th3->GetYaxis()->GetNbins();
+    auto nz = nbins_zaxis;//th3->GetZaxis()->GetNbins();
 
     (*out).resize(nx);
     for ( auto&& v2d : *out ) {
@@ -384,6 +413,7 @@ void IterateCone3D::v2v_add_elements(const vector3& in, vector3* out)
 	    }
 	}
     }
+    
     // return;
     
     // }
@@ -392,21 +422,26 @@ void IterateCone3D::v2v_add_elements(const vector3& in, vector3* out)
     // 	std::vector<std::thread> threads;
 	
     // 	// const int n_thread = 1;
-    // 	int nx_div = static_cast<int>(nx/n_threads);
-    // 	int nx_bgn = 0;
-    // 	int nx_end = 0 + nx_div;
+    // 	// int nx_div = nx/n_threads;//static_cast<int>(nx/n_threads);
+    // 	// int nx_bgn = 0;
+    // 	// int nx_end = 0 + nx_div;
 	
-    // 	for ( int thre=0; thre<n_threads-1; ++thre ) {
+    // 	// for ( int thre=0; thre<n_threads-1; ++thre ) {
+    // 	//     threads.emplace_back
+    // 	// 	( std::thread( &v2v_add_elem_impl,
+    // 	// 		       in, out, nx_bgn, nx_end, ny, nz ) );	
+    // 	//     nx_bgn = nx_end + 1;
+    // 	//     nx_end += nx_div;
+    // 	// }
+    // 	// //if ( nx_bgn<nx-1 )
+    // 	// threads.emplace_back
+    // 	//     ( std::thread( &v2v_add_elem_impl,
+    // 	// 		   in, out, nx_bgn, nx-1, ny, nz ) );
+
+    // 	for ( auto [ xbgn, xend ] : list_of_xbin_ranges ) {
     // 	    threads.emplace_back
-    // 		( std::thread( &v2v_add_elem_impl,
-    // 			       in, out, nx_bgn, nx_end, ny, nz ) );	
-    // 	    nx_bgn = nx_end + 1;
-    // 	    nx_end += nx_div;
+    // 		( std::thread(&v2v_add_elem_impl, in, out, xbgn, xend, ny, nz) );
     // 	}
-    // 	if ( nx_bgn<nx-1 )
-    // 	    threads.emplace_back
-    // 		( std::thread( &v2v_add_elem_impl,
-    // 			       in, out, nx_bgn, nx-1, ny, nz ) );
 	
     // 	for( auto& thread : threads ) thread.join();
     // }
@@ -464,29 +499,37 @@ void IterateCone3D::v2v_multiply_elements(const vector3& in, vector3* out)
     // if ( is_enabled_multiple_thread==false ) {
     for ( auto x=0; x<nx; ++x )
 	for ( auto y=0; y<ny; ++y )
-		for ( auto z=0; z<nz; ++z )
-		    (*out)[x][y][z] *= in[x][y][z];
+	    for ( auto z=0; z<nz; ++z )
+		(*out)[x][y][z] *= in[x][y][z];
+    
     // return;
-    //}
-
+    // }
+    
     // else {
     // 	std::vector<std::thread> threads;
 	
     // 	// const int n_thread = 1;
-    // 	int nx_div = static_cast<int>(nx/n_threads);
-    // 	int nx_bgn = 0;
-    // 	int nx_end = 0 + nx_div;
-    // 	for ( int thre=0; thre<n_threads-1; ++thre ) {
+    // 	//int nx_div = static_cast<int>(nx/n_threads);
+    // 	// static int nx_div = nx/n_threads;
+    // 	// int nx_bgn = 0;
+    // 	// int nx_end = 0 + nx_div;
+    // 	// for ( int thre=0; thre<n_threads-1; ++thre ) {
+    // 	//     threads.emplace_back
+    // 	// 	( std::thread( &v2v_multi_elem_impl,
+    // 	// 		       in, out, nx_bgn, nx_end, ny, nz ) );
+    // 	//     nx_bgn = nx_end + 1;
+    // 	//     nx_end += nx_div;
+    // 	// }
+    // 	// if ( nx_bgn<nx-1 )
+    // 	//     threads.emplace_back
+    // 	// 	( std::thread( &v2v_multi_elem_impl,
+    // 	// 		       in, out, nx_bgn, nx-1, ny, nz ) );
+
+    // 	for ( auto [ xbgn, xend ] : list_of_xbin_ranges ) {
     // 	    threads.emplace_back
-    // 		( std::thread( &v2v_multi_elem_impl,
-    // 			       in, out, nx_bgn, nx_end, ny, nz ) );
-    // 	    nx_bgn = nx_end + 1;
-    // 	    nx_end += nx_div;
+    // 		( std::thread(&v2v_multi_elem_impl, in, out, xbgn, xend, ny, nz) );
     // 	}
-    // 	if ( nx_bgn<nx-1 )
-    // 	    threads.emplace_back
-    // 		( std::thread( &v2v_multi_elem_impl,
-    // 			       in, out, nx_bgn, nx-1, ny, nz ) );
+
 	
     // 	for( auto& thread : threads ) thread.join();
     // }
@@ -523,7 +566,7 @@ void IterateCone3D::v2v_add_elem_impl
     for ( int x=x1; x<=x2; ++x ) {
 	for ( int y=0; y<ny; ++y ) {
 	    for ( int z=0; z<nz; ++z ) {
-		(*out)[x][y][z] += in[x][y][z];
+		(*out)[x][y][z] += (*out)[x][y][z] + in[x][y][z];
 	    }
 	}
     }
@@ -577,7 +620,8 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
 	h2v_get_elements( event.response, &temp_elems );
 
 	//cout << "copy_elements" << endl;
-	v2v_copy_elements( temp_elems, &temp2_elems );
+	//v2v_copy_elements( temp_elems, &temp2_elems );
+	temp2_elems = temp_elems;
 
 	// continue;
 
