@@ -174,15 +174,25 @@ int IterateCone3D::mod_endrun()
 void IterateCone3D::get_elements
 (TH3F* th3, vector3* out)
 {
+    // cout << "get nbins" << endl;
     auto nx = th3->GetXaxis()->GetNbins();
     auto ny = th3->GetYaxis()->GetNbins();
     auto nz = th3->GetZaxis()->GetNbins();
+    // cout << nx << ", " << ny << ", " << nz << endl;  
+
+    // cout << "resize" << endl;
     
     (*out).resize(nx);
-    for ( auto v2d : *out ) {
+    for ( auto&& v2d : *out ) {
     	v2d.resize(ny);
-    	for ( auto v1d : v2d ) v1d.resize(nz);
+    	for ( auto&& v1d : v2d ) v1d.resize(nz);
     }    
+
+    // cout << (*out).size() << endl;
+    // cout << (*out)[0].size() << endl;
+    // cout << (*out)[0][0].size() << endl;
+
+    // cout << "copy for elements" << endl;
     
     for ( int x=1; x<=nx; ++x ) {
 	for ( int y=1; y<=ny; ++y ) {
@@ -223,9 +233,9 @@ void IterateCone3D::add_elements
 double IterateCone3D::get_integral(const vector3& in)
 {
     double sum = 0.0;
-    for ( auto v2 : in )
-	for ( auto v1 : v2 )
-	    for ( auto elem : v1 ) sum += elem;		
+    for ( auto&& v2 : in )
+	for ( auto&& v1 : v2 )
+	    for ( auto&& elem : v1 ) sum += elem;		
     return sum;
 }
 
@@ -255,9 +265,9 @@ void IterateCone3D::copy_elements(const vector3& in, vector3* out)
 
 void IterateCone3D::scale_elements(double factor, vector3* out)
 {
-    for ( auto v2 : *out )
-	for ( auto v1 : v2 )
-	    for ( auto elem : v1 ) elem = elem*factor;
+    for ( auto&& v2 : *out )
+	for ( auto&& v1 : v2 )
+	    for ( auto&& elem : v1 ) elem = elem*factor;
 }
 
 void IterateCone3D::multiply_elements(const vector3& in, vector3* out)
@@ -286,26 +296,34 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
     long current_entry = -1;
     event.init_entry();
 
+    // cout << "get_element from previous" << endl;
     vector3 prev_elems;//define_vector( nbinsx, nbinsy, nbinsz );
     get_elements( previous_image, &prev_elems );
-
+    
     vector3 temp_elems, temp2_elems;
+    // cout << "begin while" << endl;
     
     while ( event.next() ) {
 	
 	++current_entry;
-	
+
+	// cout << "get_elements from event" << endl;
 	get_elements( (TH3F*)event.response->Clone(), &temp_elems );
+
+	// cout << "copy_elements" << endl;
 	copy_elements( temp_elems, &temp2_elems );
-	
+
+	// cout << "multiply_elements" << endl;
 	multiply_elements( prev_elems, &temp_elems );
 	//auto multiple = (TH3F*)event.response->Clone();
 	//multiple->Multiply( previous_image );
-	
+
+	// cout << "get_integral" << endl;
 	auto integral = get_integral( temp_elems );
 	// auto integral = multiple->Integral();
 	// vector_integral_of_multiple.emplace_back( integral );
 
+	// cout << "scale_elements" << endl;
 	scale_elements( vector_integral_of_response[ current_entry ] /
 			( integral + denominator_offset ), &temp2_elems );
 
@@ -314,11 +332,13 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
 	// 	      ( integral + denominator_offset ) );
 	
 	// new_image->Add( tempo );
+	// cout << "add_elements" << endl;
 	add_elements( temp2_elems, new_image );
 
 	// multiple->Delete();
 	// tempo->Delete();	
     }
+    // cout << "end while" << endl;
     
     new_image->Multiply( previous_image );
     
