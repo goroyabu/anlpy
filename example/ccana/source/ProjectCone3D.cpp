@@ -162,6 +162,8 @@ int ProjectCone3D::mod_bgnrun()
     else
 	rotation_around_vertical_rad = 0.0;
 
+    cout << "Rotatation Angle around Y-axis is set to " << rotation_around_vertical_rad << " [rad]" << endl;
+    
     enable_reject_fluor = get_parameter<int>("enable_reject_fluor");
     enable_normalize_cone = get_parameter<int>("enable_normalize_cone");
     
@@ -452,18 +454,25 @@ std::tuple<ProjectCone3D::hit, ProjectCone3D::hit> ProjectCone3D::get_sc2hit_eve
 	}	
     }    
 
-    if ( rotation_around_vertical_rad!=0.0 ) {
+    // if ( rotation_around_vertical_rad!=0.0 ) {
 	
-	TVector3 cdte_pos(cdte.x, cdte.y, cdte.z);
-	cdte_pos.RotateY( rotation_around_vertical_rad );
-	
-	TVector3 si_pos(si.x, si.y, si.z);
-	si_pos.RotateY( rotation_around_vertical_rad );
-	// cdte.x = -1.0 * cdte.x;
-	// cdte.z = -1.0 * cdte.z;
-	// si.x = -1.0 * si.x;
-	// si.z = -1.0 * si.z;
-    }
+    TVector3 cdte_pos(cdte.x, cdte.y, cdte.z);
+    cdte_pos.RotateY( rotation_around_vertical_rad );
+    cdte.x = cdte_pos.x();
+    cdte.y = cdte_pos.y();
+    cdte.z = cdte_pos.z();
+    
+    TVector3 si_pos(si.x, si.y, si.z);
+    si_pos.RotateY( rotation_around_vertical_rad );
+    si.x = si_pos.x();
+    si.y = si_pos.y();
+    si.z = si_pos.z();
+    // cdte.x = -1.0 * cdte.x;
+    // cdte.z = -1.0 * cdte.z;
+    // si.x = -1.0 * si.x;
+    // si.z = -1.0 * si.z;
+    
+    //}
     
     num_hits = n_si + n_cdte;
     hit1_detector = si.detid;
