@@ -129,7 +129,8 @@ protected:
     int current_entry;
     bool is_enabled_multiple_thread;
     int n_threads;
-
+    bool is_enabled_use_sbp_as_efficiency;
+    
     /* Histogram */
     int nbins_xaxis, nbins_yaxis, nbins_zaxis;
 

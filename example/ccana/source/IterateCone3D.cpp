@@ -36,6 +36,8 @@ IterateCone3D::IterateCone3D()
     define_parameter<int>("first_entry", 0);
 
     define_parameter<int>("n_threads", 1);
+
+    define_parameter<int>("use_sbp_as_efficiency", false);
 }
 IterateCone3D::~IterateCone3D()
 {
@@ -100,6 +102,8 @@ int IterateCone3D::mod_bgnrun()
     n_of_iterations = get_parameter<int>("n_of_iterations");
 
     denominator_offset = get_parameter<double>("denominator_offset");
+    is_enabled_use_sbp_as_efficiency = get_parameter<int>("use_sbp_as_efficiency");
+    
     eventid = get_parameter<int>("eventid");
     current_entry = -1;
 
@@ -671,6 +675,9 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
     prev_elems.clear();
     prev_elems.shrink_to_fit();
     // new_image->Multiply( previous_image );
+    
+    if ( this->is_enabled_use_sbp_as_efficiency ) 
+	new_image->Divide( this->sbp_image );	
     
     return new_image;
 }
