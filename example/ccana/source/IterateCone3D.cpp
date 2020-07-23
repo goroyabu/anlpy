@@ -241,6 +241,12 @@ int IterateCone3D::mod_endrun()
 	for ( auto itr : slices ) itr->Write();
 	image->Write();
     }
+
+    for ( auto image : diff_image ) {
+	auto slices = TH3Slicer::Slice( image );
+	for ( auto itr : slices ) itr->Write();
+	image->Write();
+    }
     
     output_file->Close();    
     // input_file->Close();
@@ -539,6 +545,25 @@ void IterateCone3D::v2v_multiply_elements(const vector3& in, vector3* out)
     // }
 }
 
+void IterateCone3D::v2v_divide_elements(const vector3& in, vector3* out)
+{
+    auto nx = (int)(*out).size();
+    if ( nx==0 || nx!=(int)in.size() ) return;
+    auto ny = (int)(*out)[0].size();
+    if ( ny==0 || ny!=(int)in[0].size() ) return;
+    auto nz = (int)(*out)[0][0].size();
+    if ( nz==0 || nz!=(int)in[0][0].size() ) return;
+
+    for ( auto x=0; x<nx; ++x )
+	for ( auto y=0; y<ny; ++y )
+	    for ( auto z=0; z<nz; ++z ) {
+		if ( in[x][y][z]==0.0 )
+		    (*out)[x][y][z] = 0.0;
+		else 
+		    (*out)[x][y][z] /= in[x][y][z];
+	    }
+}
+
 void IterateCone3D::h2v_get_elem_impl
 (TH3F* th3, vector3* out, int x1, int x2, int ny, int nz)
 {
@@ -595,6 +620,7 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
     // vector_integral_of_multiple.clear();
 
     auto new_image = (TH3F*)previous_image->Clone();
+    new_image->Reset();
     
     vector3 new_elems;
     h2v_get_elements( new_image, &new_elems );
@@ -605,9 +631,9 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
     // return new_image;
     
     // cout << "get_element from previous" << endl;
-    vector3 prev_elems = new_elems;
-    //vector3 prev_elems;//define_vector( nbinsx, nbinsy, nbinsz );
-    //h2v_get_elements( previous_image, &prev_elems );
+    // vector3 prev_elems = new_elems;
+    vector3 prev_elems;//define_vector( nbinsx, nbinsy, nbinsz );
+    h2v_get_elements( previous_image, &prev_elems );
     
     vector3 temp_elems, temp2_elems;
     // cout << "begin while" << endl;
@@ -664,11 +690,24 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
     
     //cout << "end while" << endl;
 
+    auto diff_new_and_previous = (TH3F*)previous_image->Clone();
+    diff_new_and_previous->SetName( Form( "diff_image_prev_and_iter%03d", iteration) );
+    diff_new_and_previous->Reset();
+    v2h_set_elements( new_elems, diff_new_and_previous );
+    diff_image.emplace_back( diff_new_and_previous );
+    
     //cout << "multipy" << endl;
     v2v_multiply_elements( prev_elems, &new_elems );
-
+    
     //cout << "set to new_image" << endl;
+    if ( this->is_enabled_use_sbp_as_efficiency ) {
+	vector3 sbp_elems;
+	h2v_get_elements( sbp_image, &sbp_elems );	
+	v2v_divide_elements( sbp_elems, &new_elems );
+    }
+    
     v2h_set_elements( new_elems, new_image );
+    // new_image->( previous_image );
 
     new_elems.clear();
     new_elems.shrink_to_fit();
@@ -676,8 +715,8 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
     prev_elems.shrink_to_fit();
     // new_image->Multiply( previous_image );
     
-    if ( this->is_enabled_use_sbp_as_efficiency ) 
-	new_image->Divide( this->sbp_image );	
+    // if ( this->is_enabled_use_sbp_as_efficiency ) 
+    // 	new_image->Divide( this->sbp_image );	
     
     return new_image;
 }

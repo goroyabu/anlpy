@@ -118,6 +118,7 @@ protected:
     resptree_event event;
     TH3F * sbp_image;
     std::vector<TH3F*> mlem_image;
+    std::vector<TH3F*> diff_image;
     
     std::vector<double> vector_integral_of_response;
     // std::vector<double> vector_integral_of_multiple;    
@@ -158,6 +159,7 @@ protected:
     void v2v_add_elements(const vector3& in, vector3* out);
     void v2v_multiply_elements(const vector3& in, vector3* out);
     //{ multiply_elements(in, out); }
+    void v2v_divide_elements(const vector3& in, vector3* out);
 
     double get_integral(const vector3& in);       
     void scale_elements(double factor, vector3* out);
