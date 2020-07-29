@@ -145,40 +145,34 @@ protected:
     using vector3 = std::vector<vector2>;
 
     vector3 make_vector3(int x, int y, int z, double value);
-
+    
     void h2v_get_elements(TH3F* th3, vector3* out);
-    //{ get_elements(th3, out); }
     void h2v_add_elements(TH3F* th3, vector3* out);
     
-    void v2h_add_elements(const vector3& in, TH3F* th3)
-    { add_elements(in, th3); }
-    void  v2h_set_elements(const vector3& in, TH3F* th3);
+    void v2h_set_elements(const vector3& in, TH3F* th3);
 
-    void v2v_copy_elements(const vector3& in, vector3* out)
-    { copy_elements(in, out); }
     void v2v_add_elements(const vector3& in, vector3* out);
     void v2v_multiply_elements(const vector3& in, vector3* out);
-    //{ multiply_elements(in, out); }
     void v2v_divide_elements(const vector3& in, vector3* out);
 
     double get_integral(const vector3& in);       
-    void scale_elements(double factor, vector3* out);
+    void   scale_elements(double factor, vector3* out);
     
     // void multiply_elements(const vector3& in, vector3* out);
-    void copy_elements(const vector3& in, vector3* out);
+    // void copy_elements(const vector3& in, vector3* out);
     // void get_elements(TH3F* th3, vector3* out);
-    void add_elements(const vector3& in, TH3F* th3);
+    // void add_elements(const vector3& in, TH3F* th3);
     
     static void h2v_get_elem_impl
     (TH3F* th3, vector3* out, int x1, int x2, int ny, int nz);
-    static void v2v_multi_elem_impl
-    (const vector3& in, vector3* out, int x1, int x2, int ny, int nz);
-    static void v2v_add_elem_impl
-    (const vector3& in, vector3* out, int x1, int x2, int ny, int nz);
+    // static void v2v_multi_elem_impl
+    // (const vector3& in, vector3* out, int x1, int x2, int ny, int nz);
+    // static void v2v_add_elem_impl
+    // (const vector3& in, vector3* out, int x1, int x2, int ny, int nz);
 
-    static void v2v_modify_element
-    (const vector3& in, vector3* out, int x1, int x2, int ny, int nz,
-     std::function<void(const float, float*)> func);
+    // static void v2v_modify_element
+    // (const vector3& in, vector3* out, int x1, int x2, int ny, int nz,
+    //  std::function<void(const float, float*)> func);
 
 };
 

@@ -18,6 +18,8 @@ using std::endl;
 #include <iomanip>
 using std::setw;
 
+#include <sstream>
+
 #include <regex>
 
 #include <bnk.hpp>
