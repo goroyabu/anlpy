@@ -124,53 +124,21 @@ time_stamp                              1        1        10        10
 
 ## 3. How to Run DSDANA
 
+Install via pip3 by the following command.
 ```sh
  $ pip3 install anlpy/example/dsdana/
 ```
 
+### 3.1 Use 5-degree polynominal as calibration curve
 
-```python
-#!/usr/bin/env python3
-
-import anlpy
-import dsdana
-
-def run_analysis():
-
-    anl = anlpy.ANLmanager()
-
-    tmpReadTTree = dsdana.ReadTTree()\
-        .SetParameter("file_name", "example_data_cc.root")\
-        .SetParameter("tree_name", "eventtree")\
-        .SetParameter("branch_ignore", "chflag*:cmn*_ex:ref*")
-    anl.AddModule(tmpReadTTree)
-
-    tmpDSDdatabase = dsdana.DSDdatabase()\
-        .SetParameter("file_name", "database.txt")
-    anl.AddModule(tmpDSDdatabase)
-
-    tmpApplyDatabase = dsdana.ApplyDatabase()
-    anl.AddModule(tmpApplyDatabase)
-
-    tmpMergeAdjacent = dsdana.MergeAdjacent()
-    anl.AddModule(tmpMergeAdjacent)
-
-    tmpCoupleHit = dsdana.CoupleHit()
-    anl.AddModule(tmpCoupleHit)
-
-    tmpWriteTTree = dsdana.WriteTTree()\
-        .SetParameter("file_name", "example_output.root")\
-        .SetParameter("tree_name", "hittree")\
-        .SetParameter("branch_ignore", "adc*:cmn*:index*:hitnum*")
-    anl.AddModule(tmpWriteTTree)
-
-    anl.ShowAnalysis()
-    anl.ReadData(10000000, 1000)
-
-if __name__ == '__main__':
-
-    run_analysis()
-    print("Test run of dsdana is succeeded !")
+```sh
+cd example/dsdana/run/poly5
+./run.py
 ```
 
-## 4.
+### 3.2 Use 3-degree spline curve as calibration curve
+
+```sh
+cd example/dsdana/run/spline3
+./analysis_hittree.py
+```
