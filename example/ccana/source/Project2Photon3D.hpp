@@ -51,6 +51,8 @@ private:
     bool is_event_list_only;
     bool use_fluor_event;
 
+    bool is_simulation_data_mode;
+    
     inline bool is_in_energy_range1(double energy)
     {
 	return e1_window_begin<=energy && energy<=e1_window_end;	

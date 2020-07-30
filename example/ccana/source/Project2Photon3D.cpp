@@ -83,7 +83,9 @@ Project2Photon3D::Project2Photon3D()
     h1_si_cc1_peak1 = nullptr;
     h1_si_cc1_peak2 = nullptr;
     h1_si_cc2_peak1 = nullptr;
-    h1_si_cc2_peak2 = nullptr;    
+    h1_si_cc2_peak2 = nullptr;
+
+    define_parameter<int>("simulation_data_mode", 0);
 }
 Project2Photon3D::~Project2Photon3D()
 {
@@ -194,7 +196,8 @@ int Project2Photon3D::mod_bgnrun()
 
     use_si_energy_only = get_parameter<int>("use_si_energy_only");
     is_event_list_only = get_parameter<int>("event_list_only");
-    
+
+    is_simulation_data_mode = get_parameter<int>("simulation_data_mode");
     
     evs::define("Coincidece events in time window");
     evs::define("SC-2hits and SC-2hits coincidence");
@@ -219,16 +222,19 @@ int Project2Photon3D::mod_ana()
     auto [ eventid1, delta_t1 ] = projectors[1]->coin_info();
     auto [ si2, cdte2 ] = projectors[2]->get_sc2hit_event();
     auto [ eventid2, delta_t2 ] = projectors[2]->coin_info();    
-    
-    if ( eventid1!=eventid2 ) {
-	cout << "***Error*** : coin_eventid in 2 trees are diffrent." << endl;
-	return anl::ANL_LOOP;
+
+    if ( is_simulation_data_mode==false ) {
+	
+	if ( eventid1!=eventid2 ){
+	    cout << "***Error*** : coin_eventid in 2 trees are diffrent." << endl;
+	    return anl::ANL_LOOP;
+	}
+	if ( delta_t1!=delta_t2 ) {
+	    cout << "***Error*** : coin_delta_t in 2 trees are diffrent." << endl;
+	    return anl::ANL_LOOP;
+	}
     }
-    if ( delta_t1!=delta_t2 ) {
-	cout << "***Error*** : coin_delta_t in 2 trees are diffrent." << endl;
-	return anl::ANL_LOOP;
-    }
-    
+
     // if ( time_window<fabs(delta_t1) ) return anl::ANL_SKIP;
     if ( time_window>=fabs(delta_t1) )
 	evs::set("Coincidece events in time window");
