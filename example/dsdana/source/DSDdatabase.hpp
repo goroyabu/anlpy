@@ -82,6 +82,12 @@ public:
 	    else this->is_badch = true;
 	    return this;
         }
+	data_element* set_material(const int mate)
+	{
+	    this->material = mate;
+	    return this;
+	}
+	    
 	
 	inline double epi(const float pha)
 	{

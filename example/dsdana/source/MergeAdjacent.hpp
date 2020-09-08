@@ -108,8 +108,8 @@ public:
     bool isAdjacent(int stripid, const std::vector<lv1data> &data_list);
 
 private:
-    const int materialid_si = 0;
-    const int materialid_cdte = 1;
+    static const int materialid_si;
+    static const int materialid_cdte;
 
     bool enable_uniform_ethre_si;
     bool enable_uniform_ethre_cdte;

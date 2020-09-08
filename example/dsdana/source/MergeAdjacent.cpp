@@ -18,6 +18,9 @@ using std::endl;
 #include <TDirectoryFile.h>
 #include <TString.h>
 
+const int MergeAdjacent::materialid_si = 0;
+const int MergeAdjacent::materialid_cdte = 1;
+
 MergeAdjacent::MergeAdjacent()
     : VANL_Module("MergeAdjacent", "1.0"),
       mDatabase(nullptr), m_histogram(nullptr)

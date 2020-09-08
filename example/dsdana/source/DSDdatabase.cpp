@@ -114,6 +114,7 @@ int DSDdatabase::mod_bgnrun()
         temp->asicch = asicch;
         temp->detid = detid;
         temp->stripid = stripid;
+	temp->material = material;
         temp->posx = posx;
         temp->posy = posy;
         temp->posz = posz;
