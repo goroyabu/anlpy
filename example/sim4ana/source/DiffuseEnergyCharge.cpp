@@ -31,9 +31,11 @@ DiffuseEnergyCharge::DiffuseEnergyCharge()
 {
     define_parameter<int>("diffusion_mode", 1);
     define_parameter<std::string>("efield_mode", "linear");
-
+    
     define_parameter<double>("temperature", -20);
-    define_parameter<double>("thickness", 0.500);
+    // define_parameter<double>("thickness", 0.500);
+    define_parameter<double>("thickness_of_si",   0.500);
+    define_parameter<double>("thickness_of_cdte", 0.750);
     define_parameter<double>("spread_factor_anode", 1.0);    
     define_parameter<double>("bias_voltage", 250.0);
 
@@ -75,10 +77,14 @@ int DiffuseEnergyCharge::mod_bgnrun()
 
     parameter.diffusion_mode = get_parameter<int>("diffusion_mode");
     parameter.temperature = get_parameter<double>("temperature");
-    parameter.thickness = get_parameter<double>("thickness");
+    // parameter.thickness = get_parameter<double>("thickness");
+    parameter.thickness_of_si = get_parameter<double>("thickness_of_si");
+    parameter.thickness_of_cdte = get_parameter<double>("thickness_of_cdte");
 
     parameter.bias_voltage = get_parameter<double>("bias_voltage");
-    parameter.efield_mean = parameter.bias_voltage/parameter.thickness;
+    // parameter.efield_mean = parameter.bias_voltage/parameter.thickness;
+    parameter.efield_mean_of_si = parameter.bias_voltage/parameter.thickness_of_si;
+    parameter.efield_mean_of_cdte = parameter.bias_voltage/parameter.thickness_of_cdte;
 
     auto efmode = get_parameter<std::string>("efield_mode");
     if ( efmode=="linear" )
@@ -243,7 +249,7 @@ int DiffuseEnergyCharge::FillDiffusedEnergy
 (detector_stack& det, const hit& h)
 //(TH2D* detector_pixel, const hit& h)
 {
-    auto sigma = this->DiffusionSigmaAnode(h.pos_z, h.pixel_center_z);
+    auto sigma = this->DiffusionSigmaAnode(h.pos_z, h.pixel_center_z, h.material);
     
     static constexpr int diffusion_number = 100;
     static constexpr double dif_factor = (double)1/diffusion_number;
@@ -278,7 +284,8 @@ int DiffuseEnergyCharge::mod_endrun()
     return anl::ANL_OK;
 }
 
-double DiffuseEnergyCharge::DiffusionSigmaAnode(double z, double pixel_center_z)
+double DiffuseEnergyCharge::DiffusionSigmaAnode
+(double z, double pixel_center_z, int material)
 {
     static constexpr double eplus = 1.0;
     static constexpr double MeV = 1.0;
@@ -287,17 +294,23 @@ double DiffuseEnergyCharge::DiffusionSigmaAnode(double z, double pixel_center_z)
     static constexpr double STP_Temperature = 273.15*kelvin;
     
     double sigma = 0.;
-    if ( parameter.diffusion_mode==0 ) {
-	;
-    }
+    if ( parameter.diffusion_mode==0 ) return sigma;	
+    
     else if ( parameter.diffusion_mode==1 ) {
+
 	const double KTOverQe
 	    = ( k_Boltzmann * (parameter.temperature+STP_Temperature) ) / eplus;
 	
-	double zAnode = pixel_center_z + parameter.thickness*0.5;
+	double zAnode = pixel_center_z;
+	if ( material==0 )
+	    zAnode += parameter.thickness_of_si*0.5;
+	else if ( material==1 )
+	    zAnode += parameter.thickness_of_cdte*0.5;
+	
 	// if ( parameter.is_upsize_anode() )
-	//     zAnode = pixel_center_z + parameter.thickness*0.5;
-	double mut = this->Mutau(zAnode, z);
+	//     zAnode -= parameter.thickness*0.5;
+
+	double mut = this->Mutau(zAnode, z, material);
 	sigma = std::sqrt(2.0 * KTOverQe * mut) * parameter.spread_factor_anode;
     }
     // else if (DiffusionMode()==2) {
@@ -306,16 +319,20 @@ double DiffuseEnergyCharge::DiffusionSigmaAnode(double z, double pixel_center_z)
     return sigma;
 }
 
-double DiffuseEnergyCharge::Mutau(double z, double z_initial)
+double DiffuseEnergyCharge::Mutau(double z, double z_initial, int material)
 {
     double muT = 0.0;
+    double efield_mean = 0.0;
+    if ( material==0 ) efield_mean = parameter.efield_mean_of_si;
+    else if ( material==1 ) efield_mean = parameter.efield_mean_of_cdte;
+	
     if ( parameter.efield_mode==parameter_list::constant ) {
-	muT = std::fabs( (z-z_initial)/parameter.efield_mean );
+	muT = std::fabs( (z-z_initial)/efield_mean );
     }
     else if ( parameter.efield_mode==parameter_list::linear ) {
 	const double alpha = parameter.efield_alpha;
 	muT = std::fabs( alpha*std::log( (z+alpha)/(z_initial+alpha) )
-		   / parameter.efield_mean );
+			 / efield_mean );
     }
     // else if (EFieldMode()==FieldShape::Bending) {
     // 	if (zInitial <= z) {

@@ -13,6 +13,7 @@
 #include <map>
 
 #include <TTree.h>
+#include <TChain.h>
 
 #include <bnk.hpp>
 #include <VANL_Module.hpp>
@@ -37,7 +38,7 @@ public:
 
 protected:
     TFile * input_file;
-    TTree * input_tree;
+    TChain * input_tree;
     long nentries;
 
     template<typename T>

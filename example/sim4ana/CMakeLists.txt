@@ -16,6 +16,8 @@ set(MODULE_CXX_LIST
   source/CutAnalysisThreshold.cpp
   source/MergeAdjacentStrip.cpp
   source/CoupleHit.cpp
+  source/ExtractCompton.cpp
+  source/HistogramCompton.cpp
   )
 
 # ----- CMake & Compiler ----- #

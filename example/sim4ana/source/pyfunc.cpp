@@ -15,7 +15,10 @@
 #include "SelectHitPattern.hpp"
 #include "CutAnalysisThreshold.hpp"
 #include "MergeAdjacentStrip.hpp"
+#include "ExtractCompton.hpp"
+#include "HistogramCompton.hpp"
 #include "CoupleHit.hpp"
+
 
 #include <pybind11/pybind11.h>
 
@@ -162,6 +165,31 @@ PYBIND11_MODULE(sim4ana, m) {
 	.def("DefineParameter", &MergeAdjacentStrip::define_parameter<std::string>)
 	.def("ShowParameter", &MergeAdjacentStrip::show_parameters);
 
+    pybind11::class_<ExtractCompton, anl::VANL_Module>(m, "ExtractCompton")
+	.def(pybind11::init<>())
+	.def("SetParameter", &ExtractCompton::set_parameter<int>)
+	.def("SetParameter", &ExtractCompton::set_parameter<double>)
+	.def("SetParameter", &ExtractCompton::set_parameter<bool>)
+	.def("SetParameter", &ExtractCompton::set_parameter<std::string>)
+	.def("DefineParameter", &ExtractCompton::define_parameter<int>)
+	.def("DefineParameter", &ExtractCompton::define_parameter<double>)
+	.def("DefineParameter", &ExtractCompton::define_parameter<bool>)
+	.def("DefineParameter", &ExtractCompton::define_parameter<std::string>)
+	.def("ShowParameter", &ExtractCompton::show_parameters);
+
+    pybind11::class_<HistogramCompton, anl::VANL_Module>(m, "HistogramCompton")
+	.def(pybind11::init<>())
+	.def("SetParameter", &HistogramCompton::set_parameter<int>)
+	.def("SetParameter", &HistogramCompton::set_parameter<double>)
+	.def("SetParameter", &HistogramCompton::set_parameter<bool>)
+	.def("SetParameter", &HistogramCompton::set_parameter<std::string>)
+	.def("DefineParameter", &HistogramCompton::define_parameter<int>)
+	.def("DefineParameter", &HistogramCompton::define_parameter<double>)
+	.def("DefineParameter", &HistogramCompton::define_parameter<bool>)
+	.def("DefineParameter", &HistogramCompton::define_parameter<std::string>)
+	.def("ShowParameter", &HistogramCompton::show_parameters);
+
+    
     // pybind11::class_<CoupleHit, anl::VANL_Module>(m, "CoupleHit")
     // 	.def(pybind11::init<>())
     // 	.def("SetParameter", &CoupleHit::set_parameter<int>)

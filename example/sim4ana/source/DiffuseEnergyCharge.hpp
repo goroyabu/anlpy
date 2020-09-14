@@ -132,14 +132,18 @@ private:
     {
 	int diffusion_mode;
 	double temperature;
-	double thickness;
+	// double thickness;
+	double thickness_of_si;
+	double thickness_of_cdte;
 	double spread_factor_anode;
 	bool is_upsize_anode;
 	double bias_voltage;
 	
 	int efield_mode;
 	enum field_type { constant, linear };
-	double efield_mean;
+	// double efield_mean;
+	double efield_mean_of_si;
+	double efield_mean_of_cdte;
 	double efield_alpha;
 	
     } parameter;
@@ -157,8 +161,8 @@ private:
 	double pixel_center_z;
     };
 
-    double DiffusionSigmaAnode(double z, double pixel_center_z);
-    double Mutau(double z, double z_initial);
+    double DiffusionSigmaAnode(double z, double pixel_center_z, int material);
+    double Mutau(double z, double z_initial, int material);
     // int FillDiffusedEnergy(TH2D* detector_pixel, const hit& h);
     int FillDiffusedEnergy(detector_stack& det, const hit& h);
 };

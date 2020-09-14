@@ -9,6 +9,7 @@
 
 #include <TFile.h>
 #include <TLeaf.h>
+#include <TChainElement.h>
 
 #include <iostream>
 using std::cout;
@@ -49,24 +50,40 @@ int anl::ReadTTree::mod_bgnrun()
 
     
     auto file_name = get_parameter<std::string>( "file_name" );
-    input_file = new TFile( file_name.c_str() );    
-    if ( !input_file || input_file->IsZombie() ) {
-	cerr << "***Error*** : " << file_name << " is not found" << endl;
-	return anl::ANL_NG;
-    }
-    cout << "Opening " << file_name << " is succeeded." << endl;
-
+    // input_file = new TFile( file_name.c_str() );    
+    // if ( !input_file || input_file->IsZombie() ) {
+    // 	cerr << "***Error*** : " << file_name << " is not found" << endl;
+    // 	return anl::ANL_NG;
+    // }
+    // cout << "Opening " << file_name << " is succeeded." << endl;
     
     auto tree_name = get_parameter<std::string>( "tree_name" );
-    input_tree = (TTree*)input_file->Get( tree_name.c_str() );
-    if ( !input_tree ) {
+    // input_tree = (TTree*)input_file->Get( tree_name.c_str() );
+    input_tree = new TChain( tree_name.c_str() );
+    input_tree->Add( file_name.c_str() );
+
+    if ( input_tree->GetNtrees()==0 )  {
+	//if ( !input_tree ) {
 	cerr << "***Error*** : " << tree_name << " is not found" << endl;
 	return anl::ANL_NG;
     }
-    cout << tree_name << " is found." << endl;
+    
+    int ifile = 0;
+    auto list_of_files = input_tree->GetListOfFiles();
+    TIter next(list_of_files);
+    TChainElement * elem = 0;
+    while ( (elem = (TChainElement*)next() ) ) {
+        cout << "File" << ++ifile << " : " << elem->GetTitle() << endl;	
+    }
+    // cout << tree_name << " is found." << endl;
     
     nentries = input_tree->GetEntries();
-    cout << "Total Entries = " << nentries << endl;
+    if ( nentries==0 ) {
+        cout << tree_name << " has NO event." << endl;
+        return anl::ANL_NG;
+    }
+    cout << "# of entries in " << tree_name << " is " << nentries << endl;
+    // cout << "Total Entries = " << nentries << endl;
 
     auto branch_select = get_parameter<std::string>("branch_select");
     this->switch_branch(branch_select, ":", true);
@@ -101,7 +118,7 @@ int anl::ReadTTree::mod_ana()
 
 int anl::ReadTTree::mod_endrun()
 {
-    input_file->Close();
+    // input_file->Close();
     
     return anl::ANL_OK;
 }
@@ -181,17 +198,18 @@ int anl::ReadTTree::read_all_branch()
 	    print_branch_info(key, "long long", maxsize);
 	}
 	else if ( typestring == "Char_t" ) {
-	    bnk::define<std::string>(key);
-	    bnk::put<std::string>( key, string_to_reset );
+	    continue;
+	    // bnk::define<std::string>(key);
+	    // bnk::put<std::string>( key, string_to_reset );
 	    
-	    if( !input_tree->FindBranch(key.c_str()) ) {
-		status = anl::ANL_NG; continue;
-	    }
-	    input_tree->SetBranchAddress
-		(key.c_str(), (*bnk::getvecptr<std::string>(key))[0].data() );
-	    list_of_string_brances.emplace_back( key );
+	    // if( !input_tree->FindBranch(key.c_str()) ) {
+	    // 	status = anl::ANL_NG; continue;
+	    // }
+	    // input_tree->SetBranchAddress
+	    // 	(key.c_str(), (*bnk::getvecptr<std::string>(key))[0].data() );
+	    // list_of_string_brances.emplace_back( key );
 
-	    print_branch_info(key, "string", maxsize );
+	    // print_branch_info(key, "string", maxsize );
 	}
 	else if ( typestring == "vector<int>" ) {
 	    status = read_vint_branch( key );
