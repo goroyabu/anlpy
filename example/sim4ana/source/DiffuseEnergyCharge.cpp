@@ -39,6 +39,10 @@ DiffuseEnergyCharge::DiffuseEnergyCharge()
     define_parameter<double>("spread_factor_anode", 1.0);    
     define_parameter<double>("bias_voltage", 250.0);
 
+    define_parameter<double>("charge_factor_max", 1.00);
+    define_parameter<double>("charge_factor_min", 0.75);
+    define_parameter<int>("use_hole_collect_factor_cdte", 1);
+    
     // detector_pixel_dif
     // 	= new TH2D( "detector", "detector", 128, -16, 16, 128, -16, 16);
     detector_pixels.SetAxis(128, -16, 16, 128, -16, 16);
@@ -55,7 +59,14 @@ DiffuseEnergyCharge::DiffuseEnergyCharge()
     bnk::put<double>( "DSDinfo_xmin", -16 );
     bnk::put<double>( "DSDinfo_xmax", 16 );
     bnk::put<double>( "DSDinfo_ymin", -16 );
-    bnk::put<double>( "DSDinfo_ymax", 16 );    
+    bnk::put<double>( "DSDinfo_ymax", 16 );
+
+    this->nbinsx = bnk::get<int>( "DSDinfo_nstrips_x" );
+    this->nbinsy = bnk::get<int>( "DSDinfo_nstrips_y" );
+    this->xmin = bnk::get<double>( "DSDinfo_xmin" );
+    this->xmax = bnk::get<double>( "DSDinfo_xmax" );
+    this->ymin = bnk::get<double>( "DSDinfo_ymin" );
+    this->ymax = bnk::get<double>( "DSDinfo_ymax" );
 }
 DiffuseEnergyCharge::~DiffuseEnergyCharge()
 {
@@ -75,6 +86,22 @@ int DiffuseEnergyCharge::mod_bgnrun()
     bnk::define<double>( "pos_y_dif", npixels, "nhits_dif" );
     bnk::define<double>( "pos_z_dif", npixels, "nhits_dif" );
 
+    bnk::define<int>( "nhits_x_str" );
+    bnk::define<int>( "detid_x_str", npixels, "nhits_x_str" );
+    bnk::define<int>( "material_x_str", npixels, "nhits_x_str" );
+    bnk::define<int>( "flag_x_str", npixels, "nhits_x_str" );
+    bnk::define<int>( "strip_x_str", npixels, "nhits_x_str" );
+    bnk::define<double>( "edep_x_str", npixels, "nhits_x_str" );
+    bnk::define<double>( "pos_x_str", npixels, "nhits_x_str" );
+
+    bnk::define<int>( "nhits_y_str" );
+    bnk::define<int>( "detid_y_str", npixels, "nhits_y_str" );
+    bnk::define<int>( "material_y_str", npixels, "nhits_y_str" );
+    bnk::define<int>( "flag_y_str", npixels, "nhits_y_str" );
+    bnk::define<int>( "strip_y_str", npixels, "nhits_y_str" );
+    bnk::define<double>( "edep_y_str", npixels, "nhits_y_str" );
+    bnk::define<double>( "pos_y_str", npixels, "nhits_y_str" );
+    
     parameter.diffusion_mode = get_parameter<int>("diffusion_mode");
     parameter.temperature = get_parameter<double>("temperature");
     // parameter.thickness = get_parameter<double>("thickness");
@@ -86,6 +113,9 @@ int DiffuseEnergyCharge::mod_bgnrun()
     parameter.efield_mean_of_si = parameter.bias_voltage/parameter.thickness_of_si;
     parameter.efield_mean_of_cdte = parameter.bias_voltage/parameter.thickness_of_cdte;
 
+    cout << "Efield_mean of Si   = " << parameter.efield_mean_of_si << " V/mm" << endl;
+    cout << "Efield_mean of CdTe = " << parameter.efield_mean_of_si << " V/mm" << endl;
+    
     auto efmode = get_parameter<std::string>("efield_mode");
     if ( efmode=="linear" )
 	parameter.efield_mode = parameter_list::linear;
@@ -93,6 +123,11 @@ int DiffuseEnergyCharge::mod_bgnrun()
 	parameter.efield_mode = parameter_list::constant;
 
     parameter.spread_factor_anode = get_parameter<double>("spread_factor_anode");
+
+    parameter.charge_factor_max = get_parameter<double>("charge_factor_max");
+    parameter.charge_factor_min = get_parameter<double>("charge_factor_min");
+    parameter.is_enabled_cce_cdte_xside
+	= get_parameter<int>("use_hole_collect_factor_cdte");    
     
     return anl::ANL_OK;
 }
@@ -114,113 +149,85 @@ int DiffuseEnergyCharge::mod_ana()
     auto pixel_center_x_raw = bnk::getv<double>("pixel_center_x_raw");
     auto pixel_center_y_raw = bnk::getv<double>("pixel_center_y_raw");
     auto pixel_center_z_raw = bnk::getv<double>("pixel_center_z_raw");
+
+    int nhits_dif = nhits_raw;
+    std::vector<int> material_dif = material_raw;
+    std::vector<int> detid_dif    = detid_raw;
+    std::vector<int> strip_x_dif  = strip_x_raw;
+    std::vector<int> strip_y_dif  = strip_y_raw;
+    std::vector<double> edep_dif  = edep_raw;
+    std::vector<double> pos_x_dif = pos_x_raw;
+    std::vector<double> pos_y_dif = pos_y_raw;
+    std::vector<double> pos_z_dif = pos_z_raw;
+    std::vector<double> pixel_center_z_dif = pixel_center_z_raw; 
     
-    // for ( auto&& [ detid, h2 ] : detector_pixels.histo ) h2->Reset();
-    // for ( auto&& [ detid, n ] : detector_pixels.nhits ) n = 0;
-
-    // cout << "begin" << endl;
-
-    // cout << "reset" << endl;
-    detector_pixels.Reset();
-
-    // cout << "for ihit" << endl;
+    // detector_pixels.Reset();
     
-    for ( int ihit=0; ihit<nhits_raw; ++ihit ) {
+    // for ( int ihit=0; ihit<nhits_raw; ++ihit ) {	
+    // 	hit h;
+    // 	h.material = material_raw[ihit];
+    // 	h.detid    = detid_raw[ihit];
+    // 	h.edep     = edep_raw[ihit];
+    // 	h.pos_x    = pos_x_raw[ihit];
+    // 	h.pos_y    = pos_y_raw[ihit];
+    // 	h.pos_z    = pos_z_raw[ihit];
+    // 	h.pixel_center_z = pixel_center_z_raw[ihit];
+
+    // 	if ( detector_pixels.Exist(h.detid)==false ) {
+    // 	    // detector_pixels.AddDetector(h.detid, h.material, h.pos_z);
+    // 	    detector_pixels.AddDetector( h );
+    // 	}
+
+    // 	detector_pixels.detectors[h.detid]->nhits += 1;
+    // 	this->FillDiffusedEnergy(detector_pixels, h);
+    // }
+    
+    // int nhits_dif = 0;
+    // std::vector<int> material_dif;
+    // std::vector<int> detid_dif;
+    // std::vector<int> strip_x_dif;
+    // std::vector<int> strip_y_dif;
+    // std::vector<double> edep_dif;
+    // std::vector<double> pos_x_dif;
+    // std::vector<double> pos_y_dif;
+    // std::vector<double> pos_z_dif;
+    // std::vector<double> pixel_center_z_dif;
+
+    // for ( auto [ detid, detector ] : detector_pixels.detectors ) {
+
+    // 	if ( detector->nhits==0 ) continue;
+
+    // 	for ( auto [ pixel, edep ] : detector->content ) {
 	
-	hit h;
-	// cout << "mate" << endl;
-    	h.material = material_raw[ihit];
-	// cout << "detid " << endl;
-    	h.detid    = detid_raw[ihit];
-    	// h.strip_x  = strip_x_raw[ihit];
-    	// h.strip_y  = strip_y_raw[ihit];
-	// cout << "edep" << endl;
-    	h.edep     = edep_raw[ihit];
-	// cout << "pos" << endl;
-    	h.pos_x    = pos_x_raw[ihit];
-    	h.pos_y    = pos_y_raw[ihit];
-    	h.pos_z    = pos_z_raw[ihit];
-	// cout << "pixz" << endl;
-    	h.pixel_center_z = pixel_center_z_raw[ihit];
+    // 	    auto [ xbin, ybin ] = detector->GetBinXYZ( pixel );
+    // 	    if ( detector->IsBinInRange(xbin, ybin)==false ) continue;
+	    
+    // 	    if ( edep==0.0 ) continue;
+	    
+    // 	    edep_dif.emplace_back( edep );
+    // 	    detid_dif.emplace_back( detid );
+	    
+    // 	    auto material = detector->material;
+    // 	    material_dif.emplace_back( material );
+	    
+    // 	    strip_x_dif.emplace_back( xbin );
+    // 	    strip_y_dif.emplace_back( ybin );
+	    
+    // 	    auto pos_x = detector->histo->GetXaxis()->GetBinCenter(xbin);
+    // 	    auto pos_y = detector->histo->GetYaxis()->GetBinCenter(ybin);	    
+    // 	    pos_x_dif.emplace_back( pos_x );
+    // 	    pos_y_dif.emplace_back( pos_y );
 
-	//cout << "exist" << endl;
-	if ( detector_pixels.Exist(h.detid)==false ) {
-	    // cout << "add det" << endl;
-    	    detector_pixels.AddDetector(h.detid, h.material, h.pos_z);
-    	}
+    // 	    auto pos_z = detector->pos_z;
+    // 	    pos_z_dif.emplace_back( pos_z );
 
-	// cout << "incre nhits" << endl;
-	detector_pixels.detectors[h.detid]->nhits += 1;
-	// cout << detector_pixels.nhits[h.detid] << endl;
-
-	// cout << "fill diff" << endl;
-	// this->FillDiffusedEnergy(detector_pixels.histo[h.detid], h);
-	this->FillDiffusedEnergy(detector_pixels, h);
-    }
-
-    int nhits_dif = 0;
-    std::vector<int> material_dif;
-    std::vector<int> detid_dif;
-    std::vector<int> strip_x_dif;
-    std::vector<int> strip_y_dif;
-    std::vector<double> edep_dif;
-    std::vector<double> pos_x_dif;
-    std::vector<double> pos_y_dif;
-    std::vector<double> pos_z_dif;
-
-    // cout << "for dets" << endl;
-    for ( auto [ detid, detector ] : detector_pixels.detectors ) {
-
-	// cout << "nhits" << endl;
-	if ( detector->nhits==0 ) continue;
+    // 	    auto pix_z = detector->pixel_center_z;
+    // 	    pixel_center_z_dif.emplace_back( pix_z );
+	    
+    // 	    ++nhits_dif;
+    // 	}
 	
-	// auto npixels = h2->GetNcells();
-	// for ( int pixel=0; pixel<npixels; ++pixel ) {
-
-	// cout << "for content" << endl;
-	for ( auto [ pixel, edep ] : detector->content ) {
-	
-	    // continue;
-	    // if ( h2->IsBinOverflow(pixel) || h2->IsBinUnderflow(pixel) )
-	    // 	continue;
-	    
-	    // int xbin, ybin;
-	    // // h2->GetBinXYZ(pixel, xbin, ybin, zbin);
-	    // xbin = pixel%(detector_pixels.nbinsx+2);
-	    // ybin = ( (pixel-xbin)/(detector_pixels.nbinsx+2) )
-	    // 	%(detector_pixels.nbinsy+2);
-	    auto [ xbin, ybin ] = detector->GetBinXYZ( pixel );
-	    if ( detector->IsBinInRange(xbin, ybin)==false ) continue;
-	    
-	    // if ( xbin<=0 || detector_pixels.nbinsx+1<xbin ) continue;
-	    // if ( ybin<=0 || detector_pixels.nbinsy+1<ybin ) continue;
-	    
-	    // auto edep = h2->GetBinContent( pixel );
-	    // cout << "edep=" << edep << endl;
-	    if ( edep==0.0 ) continue;
-	    // continue;
-	    
-	    edep_dif.emplace_back( edep );
-	    detid_dif.emplace_back( detid );
-	    
-	    auto material = detector->material;
-	    material_dif.emplace_back( material );
-	    
-	    strip_x_dif.emplace_back( xbin );
-	    strip_y_dif.emplace_back( ybin );
-	    
-	    auto pos_x = detector->histo->GetXaxis()->GetBinCenter(xbin);
-	    auto pos_y = detector->histo->GetYaxis()->GetBinCenter(ybin);	    
-	    pos_x_dif.emplace_back( pos_x );
-	    pos_y_dif.emplace_back( pos_y );
-
-	    auto pos_z = detector->pos_z;
-	    pos_z_dif.emplace_back( pos_z );
-
-	    ++nhits_dif;
-	}
-	
-    }
+    // }
     
     bnk::put<int>("nhits_dif", nhits_dif);
     bnk::put<int>("material_dif", material_dif, 0, nhits_dif);
@@ -232,6 +239,111 @@ int DiffuseEnergyCharge::mod_ana()
     bnk::put<double>("pos_y_dif", pos_y_dif, 0, nhits_dif);
     bnk::put<double>("pos_z_dif", pos_z_dif, 0, nhits_dif);
 
+    std::vector<strip_data> data_x;
+    std::vector<strip_data> data_y;
+    for ( int index=0; index<nhits_dif; ++index ) {
+        auto p = std::make_pair( detid_dif[index], strip_x_dif[index] );
+        strip_data new_strip;
+        new_strip.det_strip_id = p;
+        new_strip.material = material_dif[index];
+        new_strip.edep = edep_dif[index];
+        new_strip.pos = pos_x_dif[index];
+	new_strip.z = pos_z_dif[index];
+	new_strip.pixel_center_z = pixel_center_z_dif[index];
+	new_strip.merge_same_strip(data_x);
+    }
+    for ( int index=0; index<nhits_dif; ++index ) {
+        auto p = std::make_pair( detid_dif[index], strip_y_dif[index] );
+        strip_data new_strip;
+        new_strip.det_strip_id = p;
+        new_strip.material = material_dif[index];
+        new_strip.edep = edep_dif[index];
+        new_strip.pos = pos_y_dif[index];
+	new_strip.z = pos_z_dif[index];
+	new_strip.pixel_center_z = pixel_center_z_dif[index];	
+        new_strip.merge_same_strip(data_y);
+    }
+
+    static const int detid_max = 5;//0;
+    
+    int nhits_x_out = 0;
+    std::vector<int> detid_x_out;
+    std::vector<int> material_x_out;
+    std::vector<int> flag_x_out;
+    std::vector<int> strip_x_out;
+    std::vector<double> edep_x_out;
+    std::vector<double> pos_x_out;
+    int nhits_y_out = 0;
+    std::vector<int> detid_y_out;
+    std::vector<int> material_y_out;
+    std::vector<int> flag_y_out;
+    std::vector<int> strip_y_out;
+    std::vector<double> edep_y_out;
+    std::vector<double> pos_y_out;
+    
+    for ( int detid=0; detid<detid_max; ++detid ) {
+        for ( int stripid=1; stripid<=this->NstripX(); ++stripid ) {
+            auto index = strip_data::index_in(data_x, detid, stripid);
+            if ( index<0 ) {
+		continue;
+                // if ( is_enabled_add_pedestal==false ) continue;
+                // edep_x_out.emplace_back( this->Pedestal() );
+                // flag_x_out.emplace_back( 1 );
+            }
+            else {
+		auto factor = ChargeCollectionFactorX( data_x[index] );
+		auto e_collected = data_x[index].edep * factor;
+		edep_x_out.emplace_back( e_collected );		
+                // edep_x_out.emplace_back( data_x[index].edep );
+                flag_x_out.emplace_back( 0 );
+            }
+            ++nhits_x_out;
+            detid_x_out.emplace_back( detid );
+            material_x_out.emplace_back( data_x[index].material );
+            strip_x_out.emplace_back( stripid );
+            pos_x_out.emplace_back( this->Xposition(stripid) );
+        }
+    }
+    for ( int detid=0; detid<detid_max; ++detid ) {
+        for ( int stripid=1; stripid<=this->NstripY(); ++stripid ) {
+            auto index = strip_data::index_in(data_y, detid, stripid);
+            if ( index<0 ) {
+		continue;
+                // if ( is_enabled_add_pedestal==false ) continue;
+                // edep_y_out.emplace_back( this->Pedestal() );
+                // flag_y_out.emplace_back( 1 );
+            }
+            else {
+		auto factor = ChargeCollectionFactorY( data_y[index] );
+		auto e_collected = data_y[index].edep * factor;
+		edep_y_out.emplace_back( e_collected );				
+                // edep_y_out.emplace_back( data_y[index].edep );
+                flag_y_out.emplace_back( 0 );
+            }
+            ++nhits_y_out;
+            detid_y_out.emplace_back( detid );
+            material_y_out.emplace_back( data_y[index].material );
+            strip_y_out.emplace_back( stripid );
+            pos_y_out.emplace_back( this->Yposition(stripid) );
+        }
+    }
+    
+    bnk::put<int>   ( "nhits_x_str",    nhits_x_out );
+    bnk::put<int>   ( "detid_x_str",    detid_x_out,    0, nhits_x_out );
+    bnk::put<int>   ( "material_x_str", material_x_out, 0, nhits_x_out );
+    bnk::put<int>   ( "flag_x_str",     flag_x_out,     0, nhits_x_out );
+    bnk::put<int>   ( "strip_x_str",    strip_x_out,    0, nhits_x_out );
+    bnk::put<double>( "edep_x_str",     edep_x_out,     0, nhits_x_out );
+    bnk::put<double>( "pos_x_str",      pos_x_out,      0, nhits_x_out );
+
+    bnk::put<int>   ( "nhits_y_str",    nhits_y_out );
+    bnk::put<int>   ( "detid_y_str",    detid_y_out,    0, nhits_y_out );
+    bnk::put<int>   ( "material_y_str", material_y_out, 0, nhits_y_out );
+    bnk::put<int>   ( "flag_y_str",     flag_y_out,     0, nhits_y_out );
+    bnk::put<int>   ( "strip_y_str",    strip_y_out,    0, nhits_y_out );
+    bnk::put<double>( "edep_y_str",     edep_y_out,     0, nhits_y_out );
+    bnk::put<double>( "pos_y_str",      pos_y_out,      0, nhits_y_out );
+    
     // bnk::put<int>("nhits_raw", nhits_raw);
     // bnk::put<int>("material_raw", material_raw, 0, nhits_raw);
     // bnk::put<int>("detid_raw", detid_raw, 0, nhits_raw);
@@ -247,9 +359,9 @@ int DiffuseEnergyCharge::mod_ana()
 
 int DiffuseEnergyCharge::FillDiffusedEnergy
 (detector_stack& det, const hit& h)
-//(TH2D* detector_pixel, const hit& h)
 {
     auto sigma = this->DiffusionSigmaAnode(h.pos_z, h.pixel_center_z, h.material);
+    // cout << sigma << endl;
     
     static constexpr int diffusion_number = 100;
     static constexpr double dif_factor = (double)1/diffusion_number;
@@ -262,7 +374,6 @@ int DiffuseEnergyCharge::FillDiffusedEnergy
 	auto theta = gRandom->Uniform(0.0, twopi);
 	auto dx = radius * std::cos(theta);
 	auto dy = radius * std::sin(theta);
-	// detector_pixel->Fill( h.pos_x+dx, h.pos_y+dy, edep_div );
 
 	det.detectors[h.detid]->AddContent( h.pos_x+dx, h.pos_y+dy, edep_div );
     }
@@ -322,7 +433,7 @@ double DiffuseEnergyCharge::DiffusionSigmaAnode
 double DiffuseEnergyCharge::Mutau(double z, double z_initial, int material)
 {
     double muT = 0.0;
-    double efield_mean = 0.0;
+    double efield_mean = parameter.efield_mean_of_cdte;
     if ( material==0 ) efield_mean = parameter.efield_mean_of_si;
     else if ( material==1 ) efield_mean = parameter.efield_mean_of_cdte;
 	

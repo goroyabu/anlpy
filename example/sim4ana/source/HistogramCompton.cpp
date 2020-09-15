@@ -37,7 +37,15 @@ HistogramCompton::histos_each_layer::histos_each_layer(int detector_id, TString 
     else
 	cerr << "Creating " << hname << " is failed." << endl;
     
-    th1_energy_spectra = nullptr;    
+    th1_energy_spectra = nullptr;
+
+    th2_energy_correlation
+	= new TH2D( Form("ene_corr_detid%d"+subname, detector_id),
+		    Form("detid%d"+subname+";ave=(Y+X)/2[keV];diff=(Y-X)/2[keV]",
+			 detector_id ),
+		    nbins*0.25, xmin, xmax, 100, -50, 50
+		    );
+    
 }
 void HistogramCompton::histos_each_layer::Write()
 {
@@ -50,6 +58,8 @@ void HistogramCompton::histos_each_layer::Write()
 				      Form("detid%d"+subname+";keV",detid));    
     th2_energy_spectra_each_channels->Write();
     th1_energy_spectra->Write();
+
+    th2_energy_correlation->Write();
 }
 
 HistogramCompton::histo2d_energy_vs_energy::histo2d_energy_vs_energy()
@@ -211,7 +221,10 @@ int HistogramCompton::mod_ana()
     	    ->Fill( strip_x[ihit], epi_x[ihit] );
 	hist->th2_energy_spectra_each_channels
     	    ->Fill( strip_y[ihit], epi_y[ihit] );
-	
+
+	auto epi_ave  = ( epi_y[ihit]+epi_x[ihit] ) * 0.5;
+	auto epi_diff = ( epi_y[ihit]-epi_x[ihit] ) * 0.5;
+	hist->th2_energy_correlation->Fill( epi_ave, epi_diff );	
     }
         
     if ( nhits_all==2 ) {
@@ -355,6 +368,10 @@ int HistogramCompton::mod_ana()
     	    ->Fill( strip_x[id], epi_x[id] );
     	hist->th2_energy_spectra_each_channels
     	    ->Fill( strip_y[id], epi_y[id] );
+
+	auto epi_ave  = ( epi_y[id]+epi_x[id] ) * 0.5;
+	auto epi_diff = ( epi_y[id]-epi_x[id] ) * 0.5;
+	hist->th2_energy_correlation->Fill( epi_ave, epi_diff );
     }        
     
     return anl::ANL_OK;

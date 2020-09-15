@@ -77,133 +77,170 @@ int JudgeTrigger::mod_bgnrun()
 
 int JudgeTrigger::mod_ana()
 {
-    auto nhits_in = bnk::get<int>( "nhits_dif" );
-    auto detid_in = bnk::getv<int>( "detid_dif" );
-    auto material_in = bnk::getv<int>( "material_dif" );
-    // auto flag_in = bnk::getv<int>( "flag_res" );
-    auto strip_x_in = bnk::getv<int>( "strip_x_dif" );
-    auto strip_y_in = bnk::getv<int>( "strip_y_dif" );
-    auto edep_in = bnk::getv<double>( "edep_dif" );
-    // auto edep_x_in = bnk::getv<double>( "edep_x_dif" );
-    // auto edep_y_in = bnk::getv<double>( "edep_y_dif" );
-    auto pos_x_in = bnk::getv<double>( "pos_x_dif" );
-    auto pos_y_in = bnk::getv<double>( "pos_y_dif" );
+    // auto nhits_in = bnk::get<int>( "nhits_dif" );
+    // auto detid_in = bnk::getv<int>( "detid_dif" );
+    // auto material_in = bnk::getv<int>( "material_dif" );
+    // // auto flag_in = bnk::getv<int>( "flag_res" );
+    // auto strip_x_in = bnk::getv<int>( "strip_x_dif" );
+    // auto strip_y_in = bnk::getv<int>( "strip_y_dif" );
+    // auto edep_in = bnk::getv<double>( "edep_dif" );
+    // // auto edep_x_in = bnk::getv<double>( "edep_x_dif" );
+    // // auto edep_y_in = bnk::getv<double>( "edep_y_dif" );
+    // auto pos_x_in = bnk::getv<double>( "pos_x_dif" );
+    // auto pos_y_in = bnk::getv<double>( "pos_y_dif" );
 
-    // std::vector<hit_data_res> hit_data;
-    // for ( int index=0; index<nhits_res; ++index ) {
-    // 	hit_data_res hit;
-    // 	hit.detid = detid_res[index];
-    // 	hit.flag  = flag_res[index];
-    // 	hit.strip_x = strip_x_res[index];
-    // 	hit.strip_y = strip_y_res[index];
-    // 	hit.edep_x = edep_x_res[index];
-    // 	hit.edep_y = edep_y_res[index];
-    // 	hit.pos_x = pos_x_res[index];
-    // 	hit.pos_y = pos_y_res[index];
+    // // std::vector<hit_data_res> hit_data;
+    // // for ( int index=0; index<nhits_res; ++index ) {
+    // // 	hit_data_res hit;
+    // // 	hit.detid = detid_res[index];
+    // // 	hit.flag  = flag_res[index];
+    // // 	hit.strip_x = strip_x_res[index];
+    // // 	hit.strip_y = strip_y_res[index];
+    // // 	hit.edep_x = edep_x_res[index];
+    // // 	hit.edep_y = edep_y_res[index];
+    // // 	hit.pos_x = pos_x_res[index];
+    // // 	hit.pos_y = pos_y_res[index];
 
-    // 	hit_data.emplace_back(hit);	
+    // // 	hit_data.emplace_back(hit);	
+    // // }
+
+    // if ( is_coin_si_cd(detid_in)==false && is_enabled_si_cdte_coincidence ) {
+    // 	bnk::put<int>("nhits_x_trg", 0);
+    // 	bnk::put<int>("nhits_y_trg", 0);
+    // 	return anl::ANL_SKIP;
     // }
+    
+    // std::vector<strip_data_trg> data_x;
+    // std::vector<strip_data_trg> data_y;    
+    // for ( int index=0; index<nhits_in; ++index ) {	
+    // 	auto p = std::make_pair( detid_in[index], strip_x_in[index] );
+    // 	strip_data_trg new_strip;
+    // 	new_strip.det_strip_id = p;
+    // 	new_strip.material = material_in[index];
+    // 	new_strip.edep = edep_in[index];
+    // 	// new_strip.edep = edep_x_in[index];
+    // 	new_strip.pos = pos_x_in[index];
+    // 	new_strip.merge_same_strip(data_x); 	
+    // }
+    // for ( int index=0; index<nhits_in; ++index ) {	
+    // 	auto p = std::make_pair( detid_in[index], strip_y_in[index] );
+    // 	strip_data_trg new_strip;
+    // 	new_strip.det_strip_id = p;
+    // 	new_strip.material = material_in[index];
+    // 	new_strip.edep = edep_in[index];
+    // 	// new_strip.edep = edep_y_in[index];
+    // 	new_strip.pos = pos_y_in[index];
+    // 	new_strip.merge_same_strip(data_y); 	
+    // }
+    
+    // static const int detid_max = 5;//0;
 
-    if ( is_coin_si_cd(detid_in)==false && is_enabled_si_cdte_coincidence ) {
+    // int nhits_x_trg = 0;
+    // std::vector<int> detid_x_trg;
+    // std::vector<int> material_x_trg;
+    // std::vector<int> flag_x_trg;
+    // std::vector<int> strip_x_trg;
+    // std::vector<double> edep_x_trg;
+    // std::vector<double> pos_x_trg;
+    // int nhits_y_trg = 0;
+    // std::vector<int> detid_y_trg;
+    // std::vector<int> material_y_trg;
+    // std::vector<int> flag_y_trg;
+    // std::vector<int> strip_y_trg;
+    // std::vector<double> edep_y_trg;
+    // std::vector<double> pos_y_trg;
+    
+    // for ( int detid=0; detid<detid_max; ++detid ) {
+    // 	for ( int stripid=1; stripid<=this->NstripX(); ++stripid ) {
+    // 	    auto index = strip_data_trg::index_in(data_x, detid, stripid);
+    // 	    if ( index<0 ) {
+    // 		if ( is_enabled_add_pedestal==false ) continue;
+    // 		edep_x_trg.emplace_back( this->Pedestal() );
+    // 		flag_x_trg.emplace_back( 1 );
+    // 	    }
+    // 	    else {
+    // 		edep_x_trg.emplace_back( data_x[index].edep );
+    // 		flag_x_trg.emplace_back( 0 );
+    // 	    }
+    // 	    ++nhits_x_trg;
+    // 	    detid_x_trg.emplace_back( detid );
+    // 	    material_x_trg.emplace_back( data_x[index].material );
+    // 	    strip_x_trg.emplace_back( stripid );
+    // 	    pos_x_trg.emplace_back( this->Xposition(stripid) );
+    // 	}
+    // }
+    // for ( int detid=0; detid<detid_max; ++detid ) {
+    // 	for ( int stripid=1; stripid<=this->NstripY(); ++stripid ) {
+    // 	    auto index = strip_data_trg::index_in(data_y, detid, stripid);
+    // 	    if ( index<0 ) {
+    // 		if ( is_enabled_add_pedestal==false ) continue;
+    // 		edep_y_trg.emplace_back( this->Pedestal() );
+    // 		flag_y_trg.emplace_back( 1 );
+    // 	    }
+    // 	    else {
+    // 		edep_y_trg.emplace_back( data_y[index].edep );
+    // 		flag_y_trg.emplace_back( 0 );
+    // 	    }
+    // 	    ++nhits_y_trg;
+    // 	    detid_y_trg.emplace_back( detid );
+    // 	    material_y_trg.emplace_back( data_y[index].material );
+    // 	    strip_y_trg.emplace_back( stripid );
+    // 	    pos_y_trg.emplace_back( this->Yposition(stripid) );
+    // 	}
+    // }
+    
+    // bnk::put<int>( "nhits_x_trg", nhits_x_trg);
+    // bnk::put<int>( "detid_x_trg", detid_x_trg, 0, nhits_x_trg );
+    // bnk::put<int>( "material_x_trg", material_x_trg, 0, nhits_x_trg );
+    // bnk::put<int>( "flag_x_trg", flag_x_trg, 0, nhits_x_trg );
+    // bnk::put<int>( "strip_x_trg", strip_x_trg, 0, nhits_x_trg );
+    // bnk::put<double>( "edep_x_trg", edep_x_trg, 0, nhits_x_trg );
+    // bnk::put<double>( "pos_x_trg", pos_x_trg, 0, nhits_x_trg );
+
+    // bnk::put<int>( "nhits_y_trg", nhits_y_trg);
+    // bnk::put<int>( "detid_y_trg", detid_y_trg, 0, nhits_y_trg );
+    // bnk::put<int>( "material_y_trg", material_y_trg, 0, nhits_y_trg );
+    // bnk::put<int>( "flag_y_trg", flag_y_trg, 0, nhits_y_trg );
+    // bnk::put<int>( "strip_y_trg", strip_y_trg, 0, nhits_y_trg );
+    // bnk::put<double>( "edep_y_trg", edep_y_trg, 0, nhits_y_trg );
+    // bnk::put<double>( "pos_y_trg", pos_y_trg, 0, nhits_y_trg );
+
+    auto nhits_x_in = bnk::get<int>("nhits_x_str");
+    auto nhits_y_in = bnk::get<int>("nhits_y_str");
+    auto detid_x_in = bnk::getv<int>("detid_x_str");
+    auto detid_y_in = bnk::getv<int>("detid_y_str");
+    auto material_x_in = bnk::getv<int>("material_x_str");
+    auto material_y_in = bnk::getv<int>("material_y_str");
+    auto flag_x_in = bnk::getv<int>("flag_x_str");
+    auto flag_y_in = bnk::getv<int>("flag_y_str");    
+    auto strip_x_in = bnk::getv<int>("strip_x_str");
+    auto strip_y_in = bnk::getv<int>("strip_y_str");
+    auto edep_x_in = bnk::getv<double>("edep_x_str");
+    auto edep_y_in = bnk::getv<double>("edep_y_str");
+    auto pos_x_in = bnk::getv<double>("pos_x_str");
+    auto pos_y_in = bnk::getv<double>("pos_y_str");
+    
+    if ( is_coin_si_cd(detid_x_in)==false && is_enabled_si_cdte_coincidence ) {
 	bnk::put<int>("nhits_x_trg", 0);
 	bnk::put<int>("nhits_y_trg", 0);
 	return anl::ANL_SKIP;
     }
     
-    std::vector<strip_data_trg> data_x;
-    std::vector<strip_data_trg> data_y;    
-    for ( int index=0; index<nhits_in; ++index ) {	
-	auto p = std::make_pair( detid_in[index], strip_x_in[index] );
-	strip_data_trg new_strip;
-	new_strip.det_strip_id = p;
-	new_strip.material = material_in[index];
-	new_strip.edep = edep_in[index];
-	// new_strip.edep = edep_x_in[index];
-	new_strip.pos = pos_x_in[index];
-	new_strip.merge_same_strip(data_x); 	
-    }
-    for ( int index=0; index<nhits_in; ++index ) {	
-	auto p = std::make_pair( detid_in[index], strip_y_in[index] );
-	strip_data_trg new_strip;
-	new_strip.det_strip_id = p;
-	new_strip.material = material_in[index];
-	new_strip.edep = edep_in[index];
-	// new_strip.edep = edep_y_in[index];
-	new_strip.pos = pos_y_in[index];
-	new_strip.merge_same_strip(data_y); 	
-    }
-    
-    static const int detid_max = 5;//0;
+    bnk::put<int>( "nhits_x_trg", nhits_x_in);
+    bnk::put<int>( "detid_x_trg", detid_x_in, 0, nhits_x_in );
+    bnk::put<int>( "material_x_trg", material_x_in, 0, nhits_x_in );
+    bnk::put<int>( "flag_x_trg", flag_x_in, 0, nhits_x_in );
+    bnk::put<int>( "strip_x_trg", strip_x_in, 0, nhits_x_in );
+    bnk::put<double>( "edep_x_trg", edep_x_in, 0, nhits_x_in );
+    bnk::put<double>( "pos_x_trg", pos_x_in, 0, nhits_x_in );
 
-    int nhits_x_trg = 0;
-    std::vector<int> detid_x_trg;
-    std::vector<int> material_x_trg;
-    std::vector<int> flag_x_trg;
-    std::vector<int> strip_x_trg;
-    std::vector<double> edep_x_trg;
-    std::vector<double> pos_x_trg;
-    int nhits_y_trg = 0;
-    std::vector<int> detid_y_trg;
-    std::vector<int> material_y_trg;
-    std::vector<int> flag_y_trg;
-    std::vector<int> strip_y_trg;
-    std::vector<double> edep_y_trg;
-    std::vector<double> pos_y_trg;
-    
-    for ( int detid=0; detid<detid_max; ++detid ) {
-	for ( int stripid=1; stripid<=this->NstripX(); ++stripid ) {
-	    auto index = strip_data_trg::index_in(data_x, detid, stripid);
-	    if ( index<0 ) {
-		if ( is_enabled_add_pedestal==false ) continue;
-		edep_x_trg.emplace_back( this->Pedestal() );
-		flag_x_trg.emplace_back( 1 );
-	    }
-	    else {
-		edep_x_trg.emplace_back( data_x[index].edep );
-		flag_x_trg.emplace_back( 0 );
-	    }
-	    ++nhits_x_trg;
-	    detid_x_trg.emplace_back( detid );
-	    material_x_trg.emplace_back( data_x[index].material );
-	    strip_x_trg.emplace_back( stripid );
-	    pos_x_trg.emplace_back( this->Xposition(stripid) );
-	}
-    }
-    for ( int detid=0; detid<detid_max; ++detid ) {
-	for ( int stripid=1; stripid<=this->NstripY(); ++stripid ) {
-	    auto index = strip_data_trg::index_in(data_y, detid, stripid);
-	    if ( index<0 ) {
-		if ( is_enabled_add_pedestal==false ) continue;
-		edep_y_trg.emplace_back( this->Pedestal() );
-		flag_y_trg.emplace_back( 1 );
-	    }
-	    else {
-		edep_y_trg.emplace_back( data_y[index].edep );
-		flag_y_trg.emplace_back( 0 );
-	    }
-	    ++nhits_y_trg;
-	    detid_y_trg.emplace_back( detid );
-	    material_y_trg.emplace_back( data_y[index].material );
-	    strip_y_trg.emplace_back( stripid );
-	    pos_y_trg.emplace_back( this->Yposition(stripid) );
-	}
-    }
-    
-    bnk::put<int>( "nhits_x_trg", nhits_x_trg);
-    bnk::put<int>( "detid_x_trg", detid_x_trg, 0, nhits_x_trg );
-    bnk::put<int>( "material_x_trg", material_x_trg, 0, nhits_x_trg );
-    bnk::put<int>( "flag_x_trg", flag_x_trg, 0, nhits_x_trg );
-    bnk::put<int>( "strip_x_trg", strip_x_trg, 0, nhits_x_trg );
-    bnk::put<double>( "edep_x_trg", edep_x_trg, 0, nhits_x_trg );
-    bnk::put<double>( "pos_x_trg", pos_x_trg, 0, nhits_x_trg );
-
-    bnk::put<int>( "nhits_y_trg", nhits_y_trg);
-    bnk::put<int>( "detid_y_trg", detid_y_trg, 0, nhits_y_trg );
-    bnk::put<int>( "material_y_trg", material_y_trg, 0, nhits_y_trg );
-    bnk::put<int>( "flag_y_trg", flag_y_trg, 0, nhits_y_trg );
-    bnk::put<int>( "strip_y_trg", strip_y_trg, 0, nhits_y_trg );
-    bnk::put<double>( "edep_y_trg", edep_y_trg, 0, nhits_y_trg );
-    bnk::put<double>( "pos_y_trg", pos_y_trg, 0, nhits_y_trg );
+    bnk::put<int>( "nhits_y_trg", nhits_y_in);
+    bnk::put<int>( "detid_y_trg", detid_y_in, 0, nhits_y_in );
+    bnk::put<int>( "material_y_trg", material_y_in, 0, nhits_y_in );
+    bnk::put<int>( "flag_y_trg", flag_y_in, 0, nhits_y_in );
+    bnk::put<int>( "strip_y_trg", strip_y_in, 0, nhits_y_in );
+    bnk::put<double>( "edep_y_trg", edep_y_in, 0, nhits_y_in );
+    bnk::put<double>( "pos_y_trg", pos_y_in, 0, nhits_y_in );
     
     return anl::ANL_OK;
 }

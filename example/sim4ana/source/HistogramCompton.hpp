@@ -44,6 +44,8 @@ private:
 	TH1D * th1_energy_spectra;
 	TH2D * th2_energy_spectra_each_channels;
 
+	TH2D * th2_energy_correlation;
+
 	void Write();
 
     };
