@@ -8,18 +8,74 @@
 #ifndef ExtractCompton_hpp
 #define ExtractCompton_hpp
 
+#include <sstream>
+#include <TMath.h>
+#include <TVector3.h>
+
 #include <VANL_Module.hpp>
 
 class ExtractCompton : public anl::VANL_Module
 {
 
+public:
+    
+    static inline std::vector<std::string> split
+    (const std::string& in, const std::string& delim=",")
+    {
+	std::vector<std::string> out;
+	std::stringstream ss(in); std::string word;	
+	while( std::getline(ss, word, delim.c_str()[0]) )
+	    out.emplace_back(word);
+	return out;
+    }
+    static inline std::vector<double> split_to_double
+    (const std::string& in, const std::string& delim=",")
+    {
+	auto vstr = split(in, delim);
+	std::vector<double> out;
+	for ( auto str : vstr )
+	    out.emplace_back( std::stof(str) );
+	return out;
+    }
+    static inline double compton_angle
+    (const double scat, const double abso)
+    {
+        auto cos = 1 - 511.0 * ( 1/abso - 1/(scat+abso) );
+        if ( cos <= -1.0 or 1.0 <= cos )
+            return -1;
+        auto deg = TMath::RadToDeg()*TMath::ACos(cos);
+        return std::fabs( deg );
+    }
+    static inline double angle_of_3points
+    (const TVector3& orig, const TVector3& scat, const TVector3& abso)
+    {
+        auto org_to_scat = scat - orig;
+        auto scat_to_abso = abso - scat;
+        auto rad = org_to_scat.Angle(scat_to_abso);
+        auto deg = TMath::RadToDeg()*rad;
+        return std::fabs( deg );
+    }
+    static inline bool is_fluor_of_cdte(double energy)
+    {
+	return 21<=energy && energy<=28;
+    }
+    
 private:
 
     struct list_of_parameters
     {
 	double si_threshold;
 	double cdte_threshold;
-	double si_energy_max;	
+	double si_energy_max;
+
+	std::vector<double> incident_energy_list;
+	double energy_window_half;	
+
+	// bool is_in_energy_window(double e)
+	// {
+	//     for ()
+	// }
+	
     } parameter;
     
 public:

@@ -9,6 +9,7 @@
 #define HistogramCompton_hpp
 
 #include <map>
+#include <sstream>
 
 #include <TFile.h>
 #include <TH1D.h>
@@ -28,8 +29,33 @@ public:
     int mod_ana() override;
     int mod_endrun() override;
 
+    static inline std::vector<std::string> split
+    (const std::string& in, const std::string& delim=",")
+    {
+        std::vector<std::string> out;
+        std::stringstream ss(in); std::string word;
+        while( std::getline(ss, word, delim.c_str()[0]) )
+            out.emplace_back(word);
+        return out;
+    }
+    static inline std::vector<double> split_to_double
+    (const std::string& in, const std::string& delim=",")
+    {
+        auto vstr = split(in, delim);
+        std::vector<double> out;
+        for ( auto str : vstr )
+            out.emplace_back( std::stof(str) );
+        return out;
+    }
+    
 private:
 
+    struct parameter_list
+    {	
+	std::vector<double> incident_energy_list;    
+	double energy_window_half;	
+    } parameter;
+    
     TFile * output_file;
 
     class histos_each_layer
@@ -45,6 +71,8 @@ private:
 	TH2D * th2_energy_spectra_each_channels;
 
 	TH2D * th2_energy_correlation;
+	TH2D * th2_diff_vs_cathode;
+	TH2D * th2_diff_vs_anode;
 
 	void Write();
 
@@ -105,8 +133,31 @@ private:
     histo2d_hitpattern * th2_hit_pattern;
     histo2d_hitpattern * th2_hit_pattern_ecut;
     
+    class histos_energy_peak
+    {
+	
+    public:
+	histos_energy_peak(double peak, double width);
+	inline bool IsMatchEnergy(double energy)
+	{
+	    // bool ok = std::fabs(energy-incident_energy)<=window_half_width;
+	    // std::cout << energy << " " << incident_energy << " " << ok << std::endl;
+	    return std::fabs(energy-incident_energy)<=window_half_width;
+	}
+	void Write();
+	TH1D * th1_arm;
+	TH2D * th2_scat_vs_arm;	
+	
+    private:
+	double incident_energy;
+	double window_half_width;
+	
+    };
+    std::vector<histos_energy_peak*> histos_peaks;
+    
     
     TH1D * th1_total_energy_spectra_comtpon;
+
     
 };
 

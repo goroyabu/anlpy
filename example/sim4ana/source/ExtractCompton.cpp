@@ -23,6 +23,7 @@ ExtractCompton::ExtractCompton()
     define_parameter<double>("si_threshold", 10.0);
     define_parameter<double>("cdte_threshold", 10.0);
     define_parameter<double>("si_energy_max", 120.0);
+    define_parameter<std::string>("incident_energy_list", "511.0,31.0");
 }
 ExtractCompton::~ExtractCompton()
 {
@@ -35,15 +36,32 @@ int ExtractCompton::mod_bgnrun()
     bnk::define<int>( "strip_y_lv3", 20 );
     bnk::define<int>( "hitid_over_ethre", 20 );   
     bnk::define<float>( "epi_lv3_mod", 20 );
+
+    bnk::define<double>( "epi_si" );
+    bnk::define<double>( "pos_x_si" );
+    bnk::define<double>( "pos_y_si" );
+    bnk::define<double>( "pos_z_si" );
+    bnk::define<double>( "epi_cdte" );
+    bnk::define<double>( "pos_x_cdte" );
+    bnk::define<double>( "pos_y_cdte" );
+    bnk::define<double>( "pos_z_cdte" );
+    bnk::define<int>( "flag_fluor" );
+    
+    bnk::define<double>( "epi_total_compton" );
+    bnk::define<double>( "theta_kinetic"     );
+    bnk::define<double>( "theta_geometric"   );
+    bnk::define<double>( "angular_resolution_measure" );
     
     evs::define( "Below_2Hits_Before_Cut"   );
     evs::define( "Exist_Si_Hit_After_Cut"   );
     evs::define( "Exist_CdTe_Hit_After_Cut" );
     evs::define( "Si_CdTe_2Hits_After_Cut"  );
     evs::define( "Si_CdTe_Coin_After_Cut"   );
+    evs::define( "Si_CdTe_Compton_Event"    );
 
     evs::define( "Saturated_Hits_on_Si"     );
     evs::define( "Large_Deposit_on_Si1"     );
+    evs::define( "Fluor_Hits_on_Si"         );
 
     evs::define( "Hit_on_Si1_Before_Cut" );
     evs::define( "Hit_on_Si2_Before_Cut" );
@@ -73,6 +91,11 @@ int ExtractCompton::mod_bgnrun()
     parameter.si_threshold = get_parameter<double>("si_threshold");
     parameter.cdte_threshold = get_parameter<double>("cdte_threshold");
     parameter.si_energy_max = get_parameter<double>("si_energy_max");
+
+    auto elist
+	= split_to_double( get_parameter<std::string>("incident_energy_list") );
+    std::sort( elist.begin(), elist.end() );
+    parameter.incident_energy_list = elist;
     
     return anl::ANL_OK;
 }
@@ -164,6 +187,8 @@ int ExtractCompton::mod_ana()
 
     	    if ( h->detid==0 && si_energy_max<=h->epi )
     		evs::set( "Large_Deposit_on_Si1" );
+	    if ( is_fluor_of_cdte( h->epi ) )
+		evs::set( "Fluor_Hits_on_Si" );
 	    
     	    if ( h->epi<si_threshold ) continue;
 	    if ( si_energy_max<=h->epi ) {
@@ -188,17 +213,76 @@ int ExtractCompton::mod_ana()
     	}
     }
 
+    bnk::put<int>( "hitid_over_ethre", hitid_over_ethre,
+		   0, hitid_over_ethre.size() );
+
+    if ( evs::get("Fluor_Hits_on_Si") )
+	bnk::put<int>( "flag_fluor", 1 );
+    else
+	bnk::put<int>( "flag_fluor", 0 );
+
     if ( nhits_si>0 )   evs::set( "Exist_Si_Hit_After_Cut"   );
     if ( nhits_cdte>0 ) evs::set( "Exist_CdTe_Hit_After_Cut" );
 
     if ( nhits_si>0 && nhits_cdte>0 )
 	evs::set( "Si_CdTe_Coin_After_Cut" );
     
-    if ( nhits_si==1 && nhits_cdte==1 )
-	evs::set( "Si_CdTe_2Hits_After_Cut" );
+    if ( nhits_si!=1 || nhits_cdte!=1 ) {
+	bnk::put<double>( "epi_si", 0.0);
+	bnk::put<double>( "pos_x_si", 0.0 );
+	bnk::put<double>( "pos_y_si", 0.0 );
+	bnk::put<double>( "pos_z_si", 0.0 );
+	bnk::put<double>( "epi_cdte", 0.0 );
+	bnk::put<double>( "pos_x_cdte", 0.0 );
+	bnk::put<double>( "pos_y_cdte", 0.0 );
+	bnk::put<double>( "pos_z_cdte", 0.0 );
+	bnk::put<double>( "epi_total_compton", 0.0 );
+	bnk::put<double>( "theta_kinetic", -1 );
+	bnk::put<double>( "theta_geometric", -1 );
+	bnk::put<double>( "angular_resolution_measure", 0.0 );
+	return anl::ANL_OK;
+    }
+
+    evs::set( "Si_CdTe_2Hits_After_Cut" );   	
+
+    auto hit0 = *(hit_list[ hitid_over_ethre[0] ]);
+    auto hit1 = *(hit_list[ hitid_over_ethre[1] ]);
     
-    bnk::put<int>( "hitid_over_ethre", hitid_over_ethre,
-		   0, hitid_over_ethre.size() );
+    hit si_hit; hit cdte_hit;
+    
+    if ( hit0.detid<hit1.detid ) {
+	si_hit = hit0;
+	cdte_hit = hit1;
+    }
+    else {
+	si_hit = hit1;
+	cdte_hit = hit0;
+    }
+
+    bnk::put<double>( "epi_si", si_hit.epi );
+    bnk::put<double>( "pos_x_si", si_hit.pos_x );
+    bnk::put<double>( "pos_y_si", si_hit.pos_y );
+    bnk::put<double>( "pos_z_si", si_hit.pos_z );
+    bnk::put<double>( "epi_cdte", cdte_hit.epi );
+    bnk::put<double>( "pos_x_cdte", cdte_hit.pos_x );
+    bnk::put<double>( "pos_y_cdte", cdte_hit.pos_y );
+    bnk::put<double>( "pos_z_cdte", cdte_hit.pos_z );
+
+    auto epi_total_compton = si_hit.epi + cdte_hit.epi;
+    bnk::put<double>( "epi_total_compton", epi_total_compton );
+    
+    auto theta_kinetic = compton_angle( si_hit.epi, cdte_hit.epi );
+    if ( theta_kinetic>0 ) evs::set("Si_CdTe_Compton_Event");
+    bnk::put<double>( "theta_kinetic", theta_kinetic );
+    
+    static TVector3 orig( 0, 0, 41.35 );
+    TVector3 scat( si_hit.pos_x, si_hit.pos_y, si_hit.pos_z );
+    TVector3 abso( cdte_hit.pos_x, cdte_hit.pos_y, cdte_hit.pos_z );
+    auto theta_geometric = angle_of_3points( orig, scat, abso );
+    bnk::put<double>( "theta_geometric", theta_geometric );
+    
+    auto arm = theta_geometric - theta_kinetic;
+    bnk::put<double>( "angular_resolution_measure", arm );
     
     return anl::ANL_OK;
 }

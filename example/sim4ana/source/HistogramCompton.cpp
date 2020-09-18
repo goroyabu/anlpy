@@ -43,9 +43,17 @@ HistogramCompton::histos_each_layer::histos_each_layer(int detector_id, TString 
 	= new TH2D( Form("ene_corr_detid%d"+subname, detector_id),
 		    Form("detid%d"+subname+";ave=(Y+X)/2[keV];diff=(Y-X)/2[keV]",
 			 detector_id ),
-		    nbins*0.25, xmin, xmax, 100, -50, 50
-		    );
-    
+		    nbins*0.25, xmin, xmax, 100, -50, 50 );
+    th2_diff_vs_cathode
+	= new TH2D( Form("ene_diff_cathode_detid%d"+subname, detector_id),
+		    Form("detid%d"+subname+";Cathode(X-side)[keV];diff=(Y-X)/2[keV]",
+			 detector_id ),
+		    nbins*0.25, xmin, xmax, 100, -50, 50 );
+    th2_diff_vs_anode
+	= new TH2D( Form("ene_diff_anode_detid%d"+subname, detector_id),
+		    Form("detid%d"+subname+";Anode(Y-side)[keV];diff=(Y-X)/2[keV]",
+			 detector_id ),
+		    nbins*0.25, xmin, xmax, 100, -50, 50 );
 }
 void HistogramCompton::histos_each_layer::Write()
 {
@@ -60,6 +68,8 @@ void HistogramCompton::histos_each_layer::Write()
     th1_energy_spectra->Write();
 
     th2_energy_correlation->Write();
+    th2_diff_vs_cathode->Write();
+    th2_diff_vs_anode->Write();
 }
 
 HistogramCompton::histo2d_energy_vs_energy::histo2d_energy_vs_energy()
@@ -134,6 +144,26 @@ void HistogramCompton::histo2d_hitpattern::Write()
     histo_2hits->Write();
     histo_3hits->Write();
 }
+HistogramCompton::histos_energy_peak::histos_energy_peak
+(double peak, double width)
+{
+    incident_energy = peak;
+    window_half_width = width;
+
+    th1_arm = nullptr;
+    th2_scat_vs_arm =
+	new TH2D( Form("th2_scat_vs_arm_%03.0fkev",incident_energy),
+		  Form("ARM of %5.1fkeV peak;ARM[degree];Si Energy[keV]",
+		       incident_energy),
+		  360, -180, 180, 1000, -0.5, 999.5 );
+}
+void HistogramCompton::histos_energy_peak::Write()
+{
+    th1_arm = th2_scat_vs_arm->ProjectionX("px");
+    th1_arm->SetName( Form("th1_arm_%03.0fkev",incident_energy) );
+    th1_arm->Write();    
+    th2_scat_vs_arm->Write();
+}
 
 
 HistogramCompton::HistogramCompton()
@@ -142,6 +172,9 @@ HistogramCompton::HistogramCompton()
     define_parameter<std::string>( "output_file", "output.root" );
     output_file = nullptr;
     th2_energy_vs_energy = nullptr;
+
+    define_parameter<double>("energy_window_half", 3.0);
+    define_parameter<std::string>("incident_energy_list", "511.0,31.0");
 }
 HistogramCompton::~HistogramCompton()
 {
@@ -189,6 +222,20 @@ int HistogramCompton::mod_bgnrun()
 
     th2_hit_pattern = new histo2d_hitpattern();
     th2_hit_pattern_ecut = new histo2d_hitpattern("_ecut");
+
+    parameter.energy_window_half = get_parameter<double>("energy_window_half");
+    
+    auto elist
+	= split_to_double( get_parameter<std::string>("incident_energy_list") );
+    std::sort( elist.begin(), elist.end() );
+    parameter.incident_energy_list = elist;    
+
+    for ( auto epeak : elist ) {
+	
+	auto h = new histos_energy_peak( epeak, parameter.energy_window_half );
+	histos_peaks.emplace_back( h );	
+	
+    }    
     
     return anl::ANL_OK;
 }
@@ -371,15 +418,32 @@ int HistogramCompton::mod_ana()
 
 	auto epi_ave  = ( epi_y[id]+epi_x[id] ) * 0.5;
 	auto epi_diff = ( epi_y[id]-epi_x[id] ) * 0.5;
-	hist->th2_energy_correlation->Fill( epi_ave, epi_diff );
+	hist->th2_energy_correlation->Fill( epi_ave,   epi_diff );
+	hist->th2_diff_vs_cathode->   Fill( epi_x[id], epi_diff );
+	hist->th2_diff_vs_anode->     Fill( epi_y[id], epi_diff );	
     }        
+
+    // if ( evs::get("Si_CdTe_Compton_Event")==false ) return anl::ANL_OK;
+    if ( evs::get("Fluor_Hits_on_Si")==true ) return anl::ANL_OK; 
+    
+    auto epi_total_compton = bnk::get<double>( "epi_total_compton" );
+    // auto theta_kinetic   = bnk::get<double>( "theta_kinetic"   );
+    // auto theta_geometric = bnk::get<double>( "theta_geometric" );
+    auto arm  = bnk::get<double>( "angular_resolution_measure" );
+
+    for ( auto h : histos_peaks ) {
+	if ( h->IsMatchEnergy(epi_total_compton) ) {
+	    auto epi_si = bnk::get<double>("epi_si");
+	    // cout << arm << endl;
+	    h->th2_scat_vs_arm->Fill( arm, epi_si );
+	}
+    }
     
     return anl::ANL_OK;
 }
 
 int HistogramCompton::mod_endrun()
 {
-
     output_file->cd();
 
     for ( auto [ detid, hist ] : histos ) {
@@ -396,6 +460,9 @@ int HistogramCompton::mod_endrun()
     th2_hit_pattern_ecut->Write();
 
     th1_total_energy_spectra_comtpon->Write();
+
+    for ( auto h : histos_peaks )
+	h->Write();
     
     output_file->Close();
     
