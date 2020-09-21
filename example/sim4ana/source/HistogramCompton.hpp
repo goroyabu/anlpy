@@ -146,7 +146,8 @@ private:
 	}
 	void Write();
 	TH1D * th1_arm;
-	TH2D * th2_scat_vs_arm;	
+	TH2D * th2_scat_vs_arm;
+	TH2D * th2_geom_vs_kine;
 	
     private:
 	double incident_energy;

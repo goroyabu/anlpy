@@ -18,8 +18,8 @@ using std::endl;
 #include <TDirectoryFile.h>
 #include <TString.h>
 
-const int MergeAdjacent::materialid_si = 0;
-const int MergeAdjacent::materialid_cdte = 1;
+// const int MergeAdjacent::materialid_si = 0;
+// const int MergeAdjacent::materialid_cdte = 1;
 
 MergeAdjacent::MergeAdjacent()
     : VANL_Module("MergeAdjacent", "1.0"),
@@ -306,12 +306,15 @@ int MergeAdjacent::extractSignalsOverThreshold()
     int i = m_nsignal_x_lv1 - 1;
     for(; i>=0; --i){
 
-	auto detid = mDatabase->GetDetid( m_lv1data_x_list[i].stripid );
+	auto detid = mDatabase->GetDetid( m_lv1data_x_list[i].stripid );	
 	nsignal_lv1_on_1det[detid].first++;
 	
 	//auto ethre = mDatabase->GetEthre( m_lv1data_x_list[i].stripid );
 	auto mate = mDatabase->GetMaterial( m_lv1data_x_list[i].stripid );
 	auto ethre = energy_threshold( mate, m_lv1data_x_list[i].stripid );
+	// if ( m_lv1data_x_list[i].stripid>511 )
+	//     cout << "mate,stripid,ethre=" << mate << " " << m_lv1data_x_list[i].stripid << " " << ethre << endl;
+
 	if( m_lv1data_x_list[i].epi < ethre ){
 	    m_lv1data_x_list.erase(m_lv1data_x_list.begin() + i);
 	    --m_nsignal_x_lv1;

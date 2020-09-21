@@ -101,8 +101,11 @@ int ConvertToLv1Data::mod_ana()
     bnk::put<int>( "detid_y_lv1", detid_y_in, 0, nhits_y_in );
     bnk::put<int>( "material_x_lv1", material_x_in, 0, nhits_x_in );
     bnk::put<int>( "material_y_lv1", material_y_in, 0, nhits_y_in ); 
-    bnk::put<int>( "stripid_x_lv1", strip_x_in, 0, nhits_x_in );
-    bnk::put<int>( "stripid_y_lv1", strip_y_in, 0, nhits_y_in );
+
+    auto stripid_x_lv1 = convert_stripid_x( nhits_x_in, detid_x_in, strip_x_in );
+    auto stripid_y_lv1 = convert_stripid_y( nhits_y_in, detid_y_in, strip_y_in );
+    bnk::put<int>( "stripid_x_lv1", stripid_x_lv1, 0, nhits_x_in );
+    bnk::put<int>( "stripid_y_lv1", stripid_y_lv1, 0, nhits_y_in );
 
     std::vector<float> epi_x_lv1, epi_y_lv1;
     for ( auto e : edep_x_in ) epi_x_lv1.emplace_back(e);

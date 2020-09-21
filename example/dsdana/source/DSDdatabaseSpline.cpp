@@ -117,7 +117,7 @@ int DSDdatabaseSpline::mod_bgnrun()
 	gain_curve_spline3[ stripid ] = spl;
 
         database.emplace_back(temp);
-        // temp->print();
+        temp->print();
 
 	if( asicid>maxinfo.asicid ) maxinfo.asicid = asicid;
 	if( detid>maxinfo.detid ) maxinfo.detid = detid;

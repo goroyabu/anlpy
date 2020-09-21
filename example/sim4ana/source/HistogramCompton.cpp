@@ -156,6 +156,11 @@ HistogramCompton::histos_energy_peak::histos_energy_peak
 		  Form("ARM of %5.1fkeV peak;ARM[degree];Si Energy[keV]",
 		       incident_energy),
 		  360, -180, 180, 1000, -0.5, 999.5 );
+    th2_geom_vs_kine =
+	new TH2D( Form("th2_geom_vs_kine_%03.0fkev",incident_energy),
+		  Form("Theta Correlation %5.1fkeV;Geometric[deg];Kinetic[deg]",
+		       incident_energy),
+		  360, -180, 180, 360, -180, 180 );
 }
 void HistogramCompton::histos_energy_peak::Write()
 {
@@ -163,6 +168,7 @@ void HistogramCompton::histos_energy_peak::Write()
     th1_arm->SetName( Form("th1_arm_%03.0fkev",incident_energy) );
     th1_arm->Write();    
     th2_scat_vs_arm->Write();
+    th2_geom_vs_kine->Write();
 }
 
 
@@ -403,7 +409,7 @@ int HistogramCompton::mod_ana()
     std::vector<double> ene = { epi[ hitid[0] ], epi[ hitid[1] ] };
     if ( detid[ hitid[0] ]>detid[ hitid[1] ] ) 
 	std::swap( ene[0], ene[1] ); 
-    th1_total_energy_spectra_comtpon->Fill( ene[0]+ene[1] );	        
+    // th1_total_energy_spectra_comtpon->Fill( ene[0]+ene[1] );	        
     
     for ( int ihit=0; ihit<nhits_over_thre; ++ihit ) {
     	int id = hitid[ihit];
@@ -422,20 +428,28 @@ int HistogramCompton::mod_ana()
 	hist->th2_diff_vs_cathode->   Fill( epi_x[id], epi_diff );
 	hist->th2_diff_vs_anode->     Fill( epi_y[id], epi_diff );	
     }        
-
-    // if ( evs::get("Si_CdTe_Compton_Event")==false ) return anl::ANL_OK;
+    
+    if ( evs::get("Si_CdTe_Compton_Event")==false ) return anl::ANL_OK;
     if ( evs::get("Fluor_Hits_on_Si")==true ) return anl::ANL_OK; 
     
     auto epi_total_compton = bnk::get<double>( "epi_total_compton" );
-    // auto theta_kinetic   = bnk::get<double>( "theta_kinetic"   );
-    // auto theta_geometric = bnk::get<double>( "theta_geometric" );
+    auto theta_kinetic   = bnk::get<double>( "theta_kinetic"   );
+    auto theta_geometric = bnk::get<double>( "theta_geometric" );
+    
+    static const double theta_max = 150.0;
+    if ( theta_geometric<0.0 || theta_max<theta_geometric ) return anl::ANL_OK;
+    if ( theta_kinetic<0.0 || theta_max<theta_kinetic ) return anl::ANL_OK;
+    
     auto arm  = bnk::get<double>( "angular_resolution_measure" );
 
+    th1_total_energy_spectra_comtpon->Fill( epi_total_compton );
+    
     for ( auto h : histos_peaks ) {
 	if ( h->IsMatchEnergy(epi_total_compton) ) {
 	    auto epi_si = bnk::get<double>("epi_si");
 	    // cout << arm << endl;
 	    h->th2_scat_vs_arm->Fill( arm, epi_si );
+	    h->th2_geom_vs_kine->Fill( theta_geometric, theta_kinetic );
 	}
     }
     

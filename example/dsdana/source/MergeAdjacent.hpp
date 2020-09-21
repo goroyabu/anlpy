@@ -108,8 +108,8 @@ public:
     bool isAdjacent(int stripid, const std::vector<lv1data> &data_list);
 
 private:
-    static const int materialid_si;
-    static const int materialid_cdte;
+    // static const int materialid_si;
+    // static const int materialid_cdte;
 
     bool enable_uniform_ethre_si;
     bool enable_uniform_ethre_cdte;
@@ -118,6 +118,12 @@ private:
     
     float energy_threshold(int material, int stripid)
     {
+	static const int materialid_si   = 0;
+	static const int materialid_cdte = 1;
+
+	// if ( stripid>511 )
+	//     std::cout << "in energy_threshold " << material << std::endl;
+	
 	if ( material==materialid_si && enable_uniform_ethre_si )
 	    return uniform_ethre_si;
 	else if ( material==materialid_cdte && enable_uniform_ethre_cdte )

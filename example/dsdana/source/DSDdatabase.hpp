@@ -29,7 +29,7 @@ public:
     public:
         data_element() :
             asicid(0), asicch(0), detid(0), stripid(0),
-            material(0), posx(0), posy(0), posz(0),
+            material(-1), posx(0), posy(0), posz(0),
             widthx(0), widthy(0), widthz(0), badch(0), ethre(0),
             is_xside(false), is_badch(false)
         {}

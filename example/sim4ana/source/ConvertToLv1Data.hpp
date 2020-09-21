@@ -9,6 +9,7 @@
 #define ConvertToLv1Data_hpp
 
 #include <VANL_Module.hpp>
+#include <tuple>
 
 class ConvertToLv1Data : public anl::VANL_Module
 {
@@ -19,6 +20,29 @@ public:
     int mod_bgnrun() override;
     int mod_ana() override;
     int mod_endrun() override;
+
+private:
+
+    inline std::vector<int>convert_stripid_x
+    (int nhits, const std::vector<int>& detid, const std::vector<int>& stripid)
+    {
+	std::vector<int> new_array;
+	for ( int ihit=0; ihit<nhits; ++ihit) {	    
+	    auto new_stripid = detid[ihit] * 256 + stripid[ihit];
+	    new_array.emplace_back( new_stripid );
+	}
+	return new_array;
+    }
+    inline std::vector<int>convert_stripid_y
+    (int nhits, const std::vector<int>& detid, const std::vector<int>& stripid)
+    {
+	std::vector<int> new_array;
+	for ( int ihit=0; ihit<nhits; ++ihit) {	    
+	    auto new_stripid = detid[ihit] * 256 + 128 + stripid[ihit];
+	    new_array.emplace_back( new_stripid );
+	}
+	return new_array;
+    }    
 };
 
 #endif
