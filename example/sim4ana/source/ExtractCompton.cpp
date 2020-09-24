@@ -25,8 +25,10 @@ ExtractCompton::ExtractCompton()
     define_parameter<double>("si_energy_max", 120.0);
     define_parameter<double>("cdte_energy_max", 800.0);
 
-    define_parameter<std::string>("incident_energy_list", "511.0,31.0");
+    // define_parameter<std::string>("incident_energy_list", "511.0,31.0");
 
+    define_parameter<double>("delta_e_cdte_maximum", 10.0);
+    
     define_parameter<double>("source_origin_x", 0);
     define_parameter<double>("source_origin_y", 0);
     define_parameter<double>("source_origin_z", 41.35);
@@ -62,15 +64,7 @@ int ExtractCompton::mod_bgnrun()
     bnk::define<double>( "theta_geometric"   );
     bnk::define<double>( "angular_resolution_measure" );
     
-    evs::define( "Below_2Hits_Before_Cut"   );
-    evs::define( "Not_Include_Fluor_Hits"   );
-    evs::define( "Exist_Si_Hit_After_Cut"   );
-    evs::define( "Exist_CdTe_Hit_After_Cut" );
-    evs::define( "Si_CdTe_2Hits_After_Cut"  );
-    evs::define( "Si_CdTe_Coin_After_Cut"   );
-    evs::define( "Ene_Consistent_Abso_Hits" );
-    evs::define( "Si_CdTe_Compton_Event"    );    
-    
+    evs::define( "Below_2Hits_Before_Cut"   );    
     evs::define( "Saturated_Hits_on_Si"     );
     evs::define( "Large_Deposit_on_Si1"     );
     evs::define( "Fluor_Hits_on_Si"         );
@@ -88,6 +82,14 @@ int ExtractCompton::mod_bgnrun()
     evs::define( "Hit_on_CdTe1_After_Cut" );
     evs::define( "Hit_on_CdTe2_After_Cut" );
     evs::define( "Hit_on_CdTe3_After_Cut" );    
+
+    evs::define( "Not_Include_Fluor_Hits"   );
+    evs::define( "Exist_Si_Hit_After_Cut"   );
+    evs::define( "Exist_CdTe_Hit_After_Cut" );
+    evs::define( "Si_CdTe_Coin_After_Cut"   );
+    evs::define( "Si_CdTe_2Hits_After_Cut"  );
+    evs::define( "Ene_Consistent_Abso_Hits" );
+    // evs::define( "Si_CdTe_Compton_Event"    );
     
     /** Example of operations described here **/
 
@@ -107,11 +109,13 @@ int ExtractCompton::mod_bgnrun()
     parameter.si_energy_max = get_parameter<double>("si_energy_max");
     parameter.cdte_energy_max = get_parameter<double>("cdte_energy_max");
 
-    auto elist
-	= split_to_double( get_parameter<std::string>("incident_energy_list") );
-    std::sort( elist.begin(), elist.end() );
-    parameter.incident_energy_list = elist;
+    // auto elist
+    // 	= split_to_double( get_parameter<std::string>("incident_energy_list") );
+    // std::sort( elist.begin(), elist.end() );
+    // parameter.incident_energy_list = elist;
 
+    parameter.delta_e_cdte_maximum = get_parameter<double>("delta_e_cdte_maximum");
+    
     auto orig_x = get_parameter<double>("source_origin_x");
     auto orig_y = get_parameter<double>("source_origin_y");
     auto orig_z = get_parameter<double>("source_origin_z");
@@ -303,30 +307,29 @@ int ExtractCompton::mod_ana()
     bnk::put<double>( "pos_x_cdte", cdte_hit.pos_x );
     bnk::put<double>( "pos_y_cdte", cdte_hit.pos_y );
     bnk::put<double>( "pos_z_cdte", cdte_hit.pos_z );
-
-    auto delta_e_cdte = cdte_hit.epi_y - cdte_hit.epi_x;
-    auto epi_cdte_ave = ( cdte_hit.epi_y + cdte_hit.epi_x )*0.5;
-
-    static const double delta_e_maximum = 5.0;
-    if ( std::fabs(delta_e_cdte)>delta_e_maximum ) return anl::ANL_OK;    
-    else evs::set( "Ene_Consistent_Abso_Hits" );	
     
-    auto epi_total_compton = si_hit.epi + epi_cdte_ave;
-    bnk::put<double>( "epi_total_compton", epi_total_compton );
+    // auto epi_cdte = ( cdte_hit.epi_y + cdte_hit.epi_x )*0.5;    
+    // // auto epi_total_compton = si_hit.epi + epi_cdte;
+    // // bnk::put<double>( "epi_total_compton", epi_total_compton );
     
-    auto theta_kinetic = compton_angle( si_hit.epi, epi_cdte_ave );
-    if ( theta_kinetic>0 ) evs::set( "Si_CdTe_Compton_Event" );
-    bnk::put<double>( "theta_kinetic", theta_kinetic );
+    // auto theta_kinetic = compton_angle( si_hit.epi, epi_cdte );
+    // bnk::put<double>( "theta_kinetic", theta_kinetic );
     
-    //static TVector3 orig( 0, 0, 41.35 );
-    TVector3 orig = parameter.source_origin;
-    TVector3 scat( si_hit.pos_x, si_hit.pos_y, si_hit.pos_z );
-    TVector3 abso( cdte_hit.pos_x, cdte_hit.pos_y, cdte_hit.pos_z );
-    auto theta_geometric = angle_of_3points( orig, scat, abso );
-    bnk::put<double>( "theta_geometric", theta_geometric );
+    // TVector3 orig = parameter.source_origin;
+    // TVector3 scat( si_hit.pos_x, si_hit.pos_y, si_hit.pos_z );
+    // TVector3 abso( cdte_hit.pos_x, cdte_hit.pos_y, cdte_hit.pos_z );
+    // auto theta_geometric = angle_of_3points( orig, scat, abso );
+    // bnk::put<double>( "theta_geometric", theta_geometric );
     
-    auto arm = theta_geometric - theta_kinetic;
-    bnk::put<double>( "angular_resolution_measure", arm );
+    // auto arm = theta_geometric - theta_kinetic;
+    // bnk::put<double>( "angular_resolution_measure", arm );
+    
+    // // if ( theta_kinetic>0 ) evs::set( "Si_CdTe_Compton_Event" );    
+    // // else                   return anl::ANL_OK;
+    
+    auto delta_e_cdte = cdte_hit.epi_y - cdte_hit.epi_x;    
+    if ( std::fabs(delta_e_cdte)<=parameter.delta_e_cdte_maximum )
+    	evs::set( "Ene_Consistent_Abso_Hits" );	
     
     return anl::ANL_OK;
 }

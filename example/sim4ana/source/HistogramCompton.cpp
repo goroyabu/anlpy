@@ -181,6 +181,13 @@ HistogramCompton::HistogramCompton()
 
     define_parameter<double>("energy_window_half", 3.0);
     define_parameter<std::string>("incident_energy_list", "511.0,31.0");
+
+    define_parameter<double>("source_origin_x", 0);
+    define_parameter<double>("source_origin_y", 0);
+    define_parameter<double>("source_origin_z", 41.35);
+    
+    define_parameter<std::string>("cdte_energy_mode", "Anode");
+    define_parameter<std::string>("abso_energy_mode", "CdTe");
 }
 HistogramCompton::~HistogramCompton()
 {
@@ -202,6 +209,11 @@ int HistogramCompton::mod_bgnrun()
 	histos_ecut[ detid ] = new histos_each_layer(detid, "_ecut");
     }
 
+    evs::define("Si_CdTe_2Hits_Not_Fluor_and_Ene_Consis");
+    evs::define("Reasonable_Angle_Geom");
+    evs::define("Reasonable_Angle_Kine");
+    evs::define("Si_CdTe_Compton_Event");    
+    
     evs::define("Si1_CdTe1_2Hits_Before_Cut");
     evs::define("Si1_CdTe2_2Hits_Before_Cut");
     evs::define("Si1_CdTe3_2Hits_Before_Cut");
@@ -240,8 +252,37 @@ int HistogramCompton::mod_bgnrun()
 	
 	auto h = new histos_energy_peak( epeak, parameter.energy_window_half );
 	histos_peaks.emplace_back( h );	
-	
+
+	TString evs_name =
+	    Form("Si+CdTe_In_E-window_of_%5.1fkeV", h->GetEnergy() );	
+	evs::define((std::string)evs_name);
     }    
+
+    auto orig_x = get_parameter<double>("source_origin_x");
+    auto orig_y = get_parameter<double>("source_origin_y");
+    auto orig_z = get_parameter<double>("source_origin_z");
+    parameter.source_origin = TVector3( orig_x, orig_y, orig_z );
+
+    auto cdte_emode = get_parameter<std::string>("cdte_energy_mode");
+    if ( cdte_emode=="Anode" || cdte_emode=="anode" ||
+	 cdte_emode=="Al-side" || cdte_emode=="Y-side" || cdte_emode=="y-side" ) {
+	parameter.cdte_energy_mode = ANODE;
+	cout << "> Use Energy of Anode-sideas CdTe Energy" << endl;
+    }
+    else {
+	parameter.cdte_energy_mode = AVERAGE;
+	cout << "> Use Average Energy of both-sides as CdTe Energy" << endl;
+    }
+
+    auto abs_emode = get_parameter<std::string>("abso_energy_mode");
+    if ( abs_emode=="CdTe" ) {
+	parameter.abso_energy_mode = CDTE;
+	cout << "> Use CdTe Energy as Absorption" << endl;	
+    }
+    else {
+	parameter.abso_energy_mode = PEAK_EXT_SI;
+	cout << "> Use Energy of (Epeak-Si) as Absorption" << endl;
+    }
     
     return anl::ANL_OK;
 }
@@ -327,8 +368,7 @@ int HistogramCompton::mod_ana()
 	
 	th2_hit_pattern->Fill3Hits( detid[0], detid[1], detid[2] );
 	
-    }
-    
+    }    
     
     auto nhits_over_thre = (int)hitid.size();
     if ( nhits_over_thre<1 ) return anl::ANL_OK;    
@@ -429,29 +469,117 @@ int HistogramCompton::mod_ana()
 	hist->th2_diff_vs_anode->     Fill( epi_y[id], epi_diff );	
     }        
     
-    if ( evs::get("Si_CdTe_Compton_Event")==false ) return anl::ANL_OK;
-    if ( evs::get("Fluor_Hits_on_Si")==true ) return anl::ANL_OK; 
+    if ( evs::get( "Not_Include_Fluor_Hits" )==false ) return anl::ANL_OK;
+    if ( evs::get( "Ene_Consistent_Abso_Hits" )==false ) return anl::ANL_OK;
+    evs::set("Si_CdTe_2Hits_Not_Fluor_and_Ene_Consis");
     
-    auto epi_total_compton = bnk::get<double>( "epi_total_compton" );
-    auto theta_kinetic   = bnk::get<double>( "theta_kinetic"   );
-    auto theta_geometric = bnk::get<double>( "theta_geometric" );
+    auto epi_x_si = bnk::get<double>("epi_x_si");
+    // auto epi_y_si = bnk::get<double>("epi_y_si");
+    auto epi_si = epi_x_si;
+    auto epi_x_cdte = bnk::get<double>("epi_x_cdte");
+    auto epi_y_cdte = bnk::get<double>("epi_y_cdte");
+    auto epi_cdte = epi_y_cdte;
+    auto pos_x_si = bnk::get<double>("pos_x_si");
+    auto pos_y_si = bnk::get<double>("pos_y_si");
+    auto pos_z_si = bnk::get<double>("pos_z_si");
+    auto pos_x_cdte = bnk::get<double>("pos_x_cdte");
+    auto pos_y_cdte = bnk::get<double>("pos_y_cdte");
+    auto pos_z_cdte = bnk::get<double>("pos_z_cdte");    
+    
+    if ( parameter.cdte_energy_mode==AVERAGE )
+	epi_cdte = ( epi_x_cdte + epi_y_cdte ) * 0.5;
+    
+    auto epi_total_compton = epi_si + epi_cdte;
+    bnk::put<double>( "epi_total_compton", epi_total_compton );
+    
+    TVector3 pos_orig = parameter.source_origin;
+    TVector3 pos_scat( pos_x_si, pos_y_si, pos_z_si );
+    TVector3 pos_abso( pos_x_cdte, pos_y_cdte, pos_z_cdte );   
+    auto theta_geometric = angle_of_3points( pos_orig, pos_scat, pos_abso );
+    // bnk::put<double>( "theta_geometric", theta_geometric );
     
     static const double theta_max = 150.0;
-    if ( theta_geometric<0.0 || theta_max<theta_geometric ) return anl::ANL_OK;
+    if ( theta_geometric<0.0 || theta_max<theta_geometric ) return anl::ANL_OK;    
+    evs::set( "Reasonable_Angle_Geom" );
+
+    auto theta_kinetic = compton_angle( epi_si, epi_cdte );
     if ( theta_kinetic<0.0 || theta_max<theta_kinetic ) return anl::ANL_OK;
-    
-    auto arm  = bnk::get<double>( "angular_resolution_measure" );
+    evs::set( "Reasonable_Angle_Kine" );
 
     th1_total_energy_spectra_comtpon->Fill( epi_total_compton );
     
     for ( auto h : histos_peaks ) {
-	if ( h->IsMatchEnergy(epi_total_compton) ) {
-	    auto epi_si = bnk::get<double>("epi_si");
-	    // cout << arm << endl;
-	    h->th2_scat_vs_arm->Fill( arm, epi_si );
-	    h->th2_geom_vs_kine->Fill( theta_geometric, theta_kinetic );
-	}
+	
+    	if ( h->IsMatchEnergy(epi_total_compton) ) {	    
+	    
+    	    auto epi_scat = epi_si;
+    	    auto epi_abso = epi_cdte;
+    	    if ( parameter.abso_energy_mode==PEAK_EXT_SI )
+    		epi_abso = h->GetEnergy() - epi_si;
+	    
+    	    auto theta_kinetic_peak = compton_angle( epi_scat, epi_abso );
+    	    // bnk::put<double>( "theta_kinetic", theta_kinetic );
+	    
+    	    if ( theta_kinetic_peak<0.0 || theta_max<theta_kinetic_peak )
+    	    	continue;	    
+    	    evs::set( "Si_CdTe_Compton_Event" );
+
+    	    auto arm = theta_geometric - theta_kinetic_peak;
+	    // auto arm  = bnk::get<double>( "angular_resolution_measure" );
+    	    // bnk::put<double>( "angular_resolution_measure", arm );
+
+	    if ( std::fabs(arm)>25.0 ) {
+		cout << "det=" << detid[ hitid[0] ] << "," << detid[ hitid[1] ] << endl;
+		cout << "epi=" << epi[ hitid[0] ] << "," << epi[ hitid[1] ] << endl;
+		// cout << "epi_si=" << epi_si << ", epi_cdte=" << epi_cdte << endl;
+		cout << "epi_scat=" << epi_scat << ", epi_abso=" << epi_abso << endl;
+		cout << "epi_x_cdte=" << epi_x_cdte << ", epi_y_cdte=" << epi_y_cdte << endl;
+		cout << "pos_orig=";
+		pos_orig.Print();
+		cout << "pos_scat=";
+		pos_scat.Print();
+		cout << "pos_abso=";
+		pos_abso.Print();
+		cout << "theta_g =" << theta_geometric << endl;
+		cout << "theta_k =" << theta_kinetic << endl;
+		cout << "theta_kp=" << theta_kinetic_peak << endl;
+	    }
+	    
+    	    TString evs_name =
+    		Form("Si+CdTe_In_E-window_of_%5.1fkeV", h->GetEnergy() );
+    	    evs::set((std::string)evs_name);
+	    
+    	    h->th2_scat_vs_arm->Fill( arm, epi_si );
+    	    h->th2_geom_vs_kine->Fill( theta_geometric, theta_kinetic );
+
+    	}
     }
+    
+    // // if ( evs::get("Si_CdTe_Compton_Event")==false ) return anl::ANL_OK;
+    // if ( evs::get("Fluor_Hits_on_Si")==true ) return anl::ANL_OK; 
+    
+    // // auto epi_total_compton = bnk::get<double>( "epi_total_compton" );
+    // theta_kinetic   = bnk::get<double>( "theta_kinetic"   );
+    // theta_geometric = bnk::get<double>( "theta_geometric" );
+    
+    // if ( theta_geometric<0.0 || theta_max<theta_geometric ) return anl::ANL_OK;
+    // if ( theta_kinetic<0.0 || theta_max<theta_kinetic ) return anl::ANL_OK;
+    
+    // auto arm  = bnk::get<double>( "angular_resolution_measure" );
+    // // th1_total_energy_spectra_comtpon->Fill( epi_total_compton );
+    
+    // for ( auto h : histos_peaks ) {
+    // 	if ( h->IsMatchEnergy(epi_total_compton) ) {
+    // 	    auto epi_si = bnk::get<double>("epi_si");
+    // 	    // cout << arm << endl;
+    // 	    h->th2_scat_vs_arm->Fill( arm, epi_si );
+    // 	    h->th2_geom_vs_kine->Fill( theta_geometric, theta_kinetic );
+
+    // 	    TString evs_name =
+    // 		Form("Si+CdTe_In_E-window_of_%5.1fkeV", h->GetEnergy() );
+    // 	    evs::set((std::string)evs_name);
+    // 	}
+    // }
     
     return anl::ANL_OK;
 }

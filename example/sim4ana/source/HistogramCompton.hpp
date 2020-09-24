@@ -14,6 +14,7 @@
 #include <TFile.h>
 #include <TH1D.h>
 #include <TH2D.h>
+#include <TVector3.h>
 
 #include <VANL_Module.hpp>
 
@@ -47,13 +48,40 @@ public:
             out.emplace_back( std::stof(str) );
         return out;
     }
+    static inline double compton_angle
+    (const double scat, const double abso)
+    {
+        auto cos = 1 - 511.0 * ( 1/abso - 1/(scat+abso) );
+        if ( cos <= -1.0 or 1.0 <= cos )
+            return -1;
+        auto deg = TMath::RadToDeg()*TMath::ACos(cos);
+        return std::fabs( deg );
+    }
+    static inline double angle_of_3points
+    (const TVector3& orig, const TVector3& scat, const TVector3& abso)
+    {
+        auto org_to_scat = scat - orig;
+        auto scat_to_abso = abso - scat;
+        auto rad = org_to_scat.Angle(scat_to_abso);
+        auto deg = TMath::RadToDeg()*rad;
+        return std::fabs( deg );
+    }
     
 private:
+
+    enum CdTeEnergyMode { ANODE, AVERAGE };    
+    enum AbsorptionEnergyMode { CDTE, PEAK_EXT_SI };    
 
     struct parameter_list
     {	
 	std::vector<double> incident_energy_list;    
-	double energy_window_half;	
+	double energy_window_half;
+
+	TVector3 source_origin;
+
+	CdTeEnergyMode cdte_energy_mode;
+	AbsorptionEnergyMode abso_energy_mode;
+	
     } parameter;
     
     TFile * output_file;
@@ -148,6 +176,7 @@ private:
 	TH1D * th1_arm;
 	TH2D * th2_scat_vs_arm;
 	TH2D * th2_geom_vs_kine;
+	double GetEnergy() const { return incident_energy; }
 	
     private:
 	double incident_energy;

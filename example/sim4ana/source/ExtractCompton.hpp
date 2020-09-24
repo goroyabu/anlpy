@@ -70,9 +70,11 @@ private:
 	double si_energy_max;
 	double cdte_energy_max;
 
-	std::vector<double> incident_energy_list;
-	double energy_window_half;	
+	// std::vector<double> incident_energy_list;
+	// double energy_window_half;	
 
+	double delta_e_cdte_maximum;
+	
 	TVector3 source_origin;
 	// bool is_in_energy_window(double e)
 	// {
