@@ -30,6 +30,11 @@ private:
     (double energy, double electronics_noise, const std::string& mate);
     double energy_resolution_anode
     (double energy, double electronics_noise, const std::string& mate);
+
+    struct parameter_list
+    {
+	double electronics_noise;
+    } parameter;
     
 };
 

@@ -35,6 +35,10 @@ ApplyEnergyResponse::ApplyEnergyResponse()
 {
     /** Parameters can be modified via a method 'SetParameter' in Python **/
     // define_parameter<std::string>("input_file", "input.txt");
+
+    parameter.electronics_noise = 1.6;
+    define_parameter<double>("electronics_noise", parameter.electronics_noise);
+    
     gRandom->SetSeed( time(NULL) );
 }
 ApplyEnergyResponse::~ApplyEnergyResponse()
@@ -66,6 +70,8 @@ int ApplyEnergyResponse::mod_bgnrun()
     bnk::define<double>( "edep_y_res", npixels, "nhits_y_res" );
     bnk::define<double>( "pos_y_res", npixels, "nhits_y_res" );
     // bnk::define<double>( "pos_z_res", npixels, "nhits_res" );
+
+    parameter.electronics_noise = get_parameter<double>("electronics_noise");
     
     return anl::ANL_OK;
 }
@@ -100,7 +106,7 @@ int ApplyEnergyResponse::mod_ana()
     std::vector<double> pos_y_res;
     // std::vector<double> pos_z_res;
 
-    static constexpr double electronics_noise = 1.6;
+    // static constexpr double electronics_noise = 1.6;
     
     for ( int index=0; index<nhits_x_in; ++index ) {
 	auto strip = strip_x_in[index];
@@ -110,8 +116,9 @@ int ApplyEnergyResponse::mod_ana()
 	auto mate = "si";
 	if ( material==1 ) mate = "cdte";
 	
-	auto edep
-	    = randomize_energy_cathode( edep_x_in[index], electronics_noise, mate );
+	auto edep = randomize_energy_cathode( edep_x_in[index],
+					      parameter.electronics_noise,
+					      mate );
 
 	detid_x_res.emplace_back( detid );
 	material_x_res.emplace_back( material );
@@ -132,8 +139,9 @@ int ApplyEnergyResponse::mod_ana()
 	auto mate = "si";
 	if ( material==1 ) mate = "cdte";	
 
-	auto edep
-	    = randomize_energy_anode( edep_y_in[index], electronics_noise, mate );
+	auto edep = randomize_energy_anode( edep_y_in[index],
+					    parameter.electronics_noise,
+					    mate );
 
 	detid_y_res.emplace_back( detid );
 	material_y_res.emplace_back( material );

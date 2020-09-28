@@ -28,7 +28,9 @@ private:
     {
 	std::vector<int> new_array;
 	for ( int ihit=0; ihit<nhits; ++ihit) {	    
-	    auto new_stripid = detid[ihit] * 256 + stripid[ihit];
+	    auto new_stripid = detid[ihit] * 256 + stripid[ihit] - 1;
+	    // std::cout << detid[ihit] << " " << stripid[ihit];
+	    // std::cout << " -> " << new_stripid << std::endl;
 	    new_array.emplace_back( new_stripid );
 	}
 	return new_array;
@@ -37,8 +39,13 @@ private:
     (int nhits, const std::vector<int>& detid, const std::vector<int>& stripid)
     {
 	std::vector<int> new_array;
-	for ( int ihit=0; ihit<nhits; ++ihit) {	    
-	    auto new_stripid = detid[ihit] * 256 + 128 + stripid[ihit];
+	for ( int ihit=0; ihit<nhits; ++ihit) {
+	    auto asicid = 7 - (int)(stripid[ihit] - 1)/32;
+	    auto asicch = (int)(stripid[ihit] - 1)%32;
+	    auto new_stripid = detid[ihit] * 256 + asicid*32 + asicch;
+	    // auto new_stripid = detid[ihit] * 256 + 128 + stripid[ihit] - 1;
+	    // std::cout << detid[ihit] << " " << stripid[ihit];
+	    // std::cout << " -> " << new_stripid << std::endl;	    
 	    new_array.emplace_back( new_stripid );
 	}
 	return new_array;

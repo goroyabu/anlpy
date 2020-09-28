@@ -44,7 +44,7 @@ int ConvertToLv1Data::mod_bgnrun()
     bnk::define<int>("nsignal_y_lv1", 1);
     bnk::define<int>("detid_x_lv1", nxside);
     bnk::define<int>("detid_y_lv1", nyside);
-    bnk::define<int>("material_x_lv1", nyside);
+    bnk::define<int>("material_x_lv1", nxside);
     bnk::define<int>("material_y_lv1", nyside);
     bnk::define<int>("stripid_x_lv1", nxside);
     bnk::define<int>("stripid_y_lv1", nyside);
@@ -54,11 +54,13 @@ int ConvertToLv1Data::mod_bgnrun()
     bnk::define<float>("epi_y_lv1", nyside);
 
     bnk::setkeytosize<int>("detid_x_lv1", "nsignal_x_lv1");
+    bnk::setkeytosize<int>("material_x_lv1", "nsignal_x_lv1");
     bnk::setkeytosize<int>("stripid_x_lv1", "nsignal_x_lv1");
     bnk::setkeytosize<int>("adc_cmn_x_lv2", "nsignal_x_lv1");
     bnk::setkeytosize<float>("epi_x_lv1", "nsignal_x_lv1");
 
     bnk::setkeytosize<int>("detid_y_lv1", "nsignal_y_lv1");
+    bnk::setkeytosize<int>("material_y_lv1", "nsignal_y_lv1"); 
     bnk::setkeytosize<int>("stripid_y_lv1", "nsignal_y_lv1");
     bnk::setkeytosize<int>("adc_cmn_y_lv2", "nsignal_y_lv1");
     bnk::setkeytosize<float>("epi_y_lv1", "nsignal_y_lv1");
@@ -104,6 +106,8 @@ int ConvertToLv1Data::mod_ana()
 
     auto stripid_x_lv1 = convert_stripid_x( nhits_x_in, detid_x_in, strip_x_in );
     auto stripid_y_lv1 = convert_stripid_y( nhits_y_in, detid_y_in, strip_y_in );
+    // auto stripid_x_lv1 = strip_x_in;
+    // auto stripid_y_lv1 = strip_y_in;
     bnk::put<int>( "stripid_x_lv1", stripid_x_lv1, 0, nhits_x_in );
     bnk::put<int>( "stripid_y_lv1", stripid_y_lv1, 0, nhits_y_in );
 

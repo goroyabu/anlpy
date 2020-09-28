@@ -445,6 +445,8 @@ int HistogramCompton::mod_ana()
     }
 
     if ( evs::get( "Si_CdTe_2Hits_After_Cut" )==false ) return anl::ANL_OK;
+    if ( evs::get( "Saturated_Hits_on_Si" )==true ) return anl::ANL_OK;
+    if ( evs::get( "Saturated_Hits_on_CdTe" )==true ) return anl::ANL_OK;
     
     std::vector<double> ene = { epi[ hitid[0] ], epi[ hitid[1] ] };
     if ( detid[ hitid[0] ]>detid[ hitid[1] ] ) 
@@ -528,22 +530,22 @@ int HistogramCompton::mod_ana()
 	    // auto arm  = bnk::get<double>( "angular_resolution_measure" );
     	    // bnk::put<double>( "angular_resolution_measure", arm );
 
-	    if ( std::fabs(arm)>25.0 ) {
-		cout << "det=" << detid[ hitid[0] ] << "," << detid[ hitid[1] ] << endl;
-		cout << "epi=" << epi[ hitid[0] ] << "," << epi[ hitid[1] ] << endl;
-		// cout << "epi_si=" << epi_si << ", epi_cdte=" << epi_cdte << endl;
-		cout << "epi_scat=" << epi_scat << ", epi_abso=" << epi_abso << endl;
-		cout << "epi_x_cdte=" << epi_x_cdte << ", epi_y_cdte=" << epi_y_cdte << endl;
-		cout << "pos_orig=";
-		pos_orig.Print();
-		cout << "pos_scat=";
-		pos_scat.Print();
-		cout << "pos_abso=";
-		pos_abso.Print();
-		cout << "theta_g =" << theta_geometric << endl;
-		cout << "theta_k =" << theta_kinetic << endl;
-		cout << "theta_kp=" << theta_kinetic_peak << endl;
-	    }
+	    // if ( std::fabs(arm)>25.0 ) {
+	    // 	cout << "det=" << detid[ hitid[0] ] << "," << detid[ hitid[1] ] << endl;
+	    // 	cout << "epi=" << epi[ hitid[0] ] << "," << epi[ hitid[1] ] << endl;
+	    // 	// cout << "epi_si=" << epi_si << ", epi_cdte=" << epi_cdte << endl;
+	    // 	cout << "epi_scat=" << epi_scat << ", epi_abso=" << epi_abso << endl;
+	    // 	cout << "epi_x_cdte=" << epi_x_cdte << ", epi_y_cdte=" << epi_y_cdte << endl;
+	    // 	cout << "pos_orig=";
+	    // 	pos_orig.Print();
+	    // 	cout << "pos_scat=";
+	    // 	pos_scat.Print();
+	    // 	cout << "pos_abso=";
+	    // 	pos_abso.Print();
+	    // 	cout << "theta_g =" << theta_geometric << endl;
+	    // 	cout << "theta_k =" << theta_kinetic << endl;
+	    // 	cout << "theta_kp=" << theta_kinetic_peak << endl;
+	    // }
 	    
     	    TString evs_name =
     		Form("Si+CdTe_In_E-window_of_%5.1fkeV", h->GetEnergy() );
