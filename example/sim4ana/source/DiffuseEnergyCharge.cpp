@@ -175,19 +175,45 @@ int DiffuseEnergyCharge::mod_ana()
     auto pixel_center_y_raw = bnk::getv<double>("pixel_center_y_raw");
     auto pixel_center_z_raw = bnk::getv<double>("pixel_center_z_raw");
 
-    int nhits_dif = nhits_raw;
-    std::vector<int> material_dif = material_raw;
-    std::vector<int> detid_dif    = detid_raw;
+    // int nhits_dif = nhits_raw;
+    std::vector<int> material_dif;//  = material_raw;
+    std::vector<int> detid_dif;//    = detid_raw;
     // std::vector<int> strip_x_dif  = strip_x_raw;
     // std::vector<int> strip_y_dif  = strip_y_raw;
-    std::vector<double> edep_dif  = edep_raw;
-    std::vector<double> pos_x_dif = pos_x_raw;
-    std::vector<double> pos_y_dif = pos_y_raw;
-    std::vector<double> pos_z_dif = pos_z_raw;
-    std::vector<double> pixel_center_z_dif = pixel_center_z_raw; 
-    auto strip_x_dif = convert_stripid_x(nhits_dif, detid_dif, pos_x_dif);
-    auto strip_y_dif = convert_stripid_y(nhits_dif, detid_dif, pos_y_dif);
+    std::vector<double> edep_dif;//  = edep_raw;
+    std::vector<double> pos_x_dif;// = pos_x_raw;
+    std::vector<double> pos_y_dif;// = pos_y_raw;
+    std::vector<double> pos_z_dif;// = pos_z_raw;
+    std::vector<double> pixel_center_z_dif;// = pixel_center_z_raw; 
+    // auto strip_x_dif = convert_stripid_x(nhits_raw, detid_dif, pos_x_dif);
+    // auto strip_y_dif = convert_stripid_y(nhits_raw, detid_dif, pos_y_dif);    
+    
+    int nhits_dif = 0;
+    for ( int ihit=0; ihit<nhits_raw; ++ihit ) {
+	if ( edep_raw[ihit]<=0 || 100000<edep_raw[ihit] )
+	    continue;
+	if ( detid_raw[ihit]<0 || 10000<detid_raw[ihit]  )
+	    continue;
+	if ( material_raw[ihit]<0 || 10000<material_raw[ihit] )
+	    continue;
+	if ( strip_x_raw[ihit]<0 || 10000<strip_x_raw[ihit] )
+	    continue;
+	if ( strip_y_raw[ihit]<0 || 10000<strip_y_raw[ihit] )
+	    continue;
 
+	material_dif.emplace_back( material_raw[ihit] );
+	detid_dif.emplace_back   ( detid_raw[ihit]    );
+	edep_dif.emplace_back    ( edep_raw[ihit]     );
+	pos_x_dif.emplace_back   ( pos_x_raw[ihit]    );
+	pos_y_dif.emplace_back   ( pos_y_raw[ihit]    );
+	pos_z_dif.emplace_back   ( pos_z_raw[ihit]    );
+	pixel_center_z_dif.emplace_back( pixel_center_z_raw[ihit] );	
+	++nhits_dif;
+    }
+
+    auto strip_x_dif = convert_stripid_x(nhits_dif, detid_dif, pos_x_dif);
+    auto strip_y_dif = convert_stripid_y(nhits_dif, detid_dif, pos_y_dif);    
+    
     // if ( nhits_dif>0 ) {
     // 	cout << detid_dif[0] << endl;
     // 	cout << strip_x_dif[0] << "," << strip_y_dif[0] << endl;
@@ -300,7 +326,7 @@ int DiffuseEnergyCharge::mod_ana()
         new_strip.merge_same_strip(data_y);
     }
 
-    static const int detid_max = 5;//0;
+    // static const int detid_max = 5;//0;
     
     int nhits_x_out = 0;
     std::vector<int> detid_x_out;
@@ -318,7 +344,8 @@ int DiffuseEnergyCharge::mod_ana()
     std::vector<double> pos_y_out;
     
     //for ( int detid=0; detid<detid_max; ++detid ) {
-    for ( int index=0; index<data_x.size(); ++index ) {
+    int ndata_x = data_x.size();
+    for ( int index=0; index<ndata_x; ++index ) {
 	// for ( int stripid=1; stripid<=this->NstripX(); ++stripid ) {
 	// auto index = strip_data::index_in(data_x, detid, stripid);
 	auto [ detid, stripid ] = data_x[index].det_strip_id;
