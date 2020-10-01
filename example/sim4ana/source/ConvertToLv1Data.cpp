@@ -76,6 +76,14 @@ int ConvertToLv1Data::mod_bgnrun()
     evs::define("nsignal_x_lv1==2 && nsignal_y_lv1==2");
     evs::define("nsignal_x_lv1>=3 || nsignal_y_lv1>=3");
     
+    this->nstrips_x = bnk::get<int>( "DSDinfo_nstrips_x" );
+    this->nstrips_y = bnk::get<int>( "DSDinfo_nstrips_y" );
+    this->xaxis_min = bnk::get<double>( "DSDinfo_xmin" );
+    this->xaxis_max = bnk::get<double>( "DSDinfo_xmax" );
+    this->yaxis_min = bnk::get<double>( "DSDinfo_ymin" );
+    this->yaxis_max = bnk::get<double>( "DSDinfo_ymax" );
+    this->strip_pitch_x = ( xaxis_max-xaxis_min ) / nstrips_x;
+    this->strip_pitch_y = ( yaxis_max-yaxis_min ) / nstrips_y;
     return anl::ANL_OK;
 }
 
@@ -104,8 +112,10 @@ int ConvertToLv1Data::mod_ana()
     bnk::put<int>( "material_x_lv1", material_x_in, 0, nhits_x_in );
     bnk::put<int>( "material_y_lv1", material_y_in, 0, nhits_y_in ); 
 
-    auto stripid_x_lv1 = convert_stripid_x( nhits_x_in, detid_x_in, strip_x_in );
-    auto stripid_y_lv1 = convert_stripid_y( nhits_y_in, detid_y_in, strip_y_in );
+    auto stripid_x_lv1 = convert_stripid_x( nhits_x_in, detid_x_in, pos_x_in );
+    auto stripid_y_lv1 = convert_stripid_y( nhits_y_in, detid_y_in, pos_y_in );
+    // auto stripid_x_lv1 = convert_stripid_x( nhits_x_in, detid_x_in, strip_x_in );
+    // auto stripid_y_lv1 = convert_stripid_y( nhits_y_in, detid_y_in, strip_y_in );
     // auto stripid_x_lv1 = strip_x_in;
     // auto stripid_y_lv1 = strip_y_in;
     bnk::put<int>( "stripid_x_lv1", stripid_x_lv1, 0, nhits_x_in );

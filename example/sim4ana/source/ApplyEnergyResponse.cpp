@@ -36,10 +36,14 @@ ApplyEnergyResponse::ApplyEnergyResponse()
     /** Parameters can be modified via a method 'SetParameter' in Python **/
     // define_parameter<std::string>("input_file", "input.txt");
 
+    parameter.is_enabled_randomize = true;
+    define_parameter<int>("use_randomize_energy", parameter.is_enabled_randomize);
+
     parameter.electronics_noise = 1.6;
     define_parameter<double>("electronics_noise", parameter.electronics_noise);
     
-    gRandom->SetSeed( time(NULL) );
+    // gRandom->SetSeed( time(NULL) );
+    define_parameter<int>("random_seed",0);
 }
 ApplyEnergyResponse::~ApplyEnergyResponse()
 {
@@ -72,7 +76,9 @@ int ApplyEnergyResponse::mod_bgnrun()
     // bnk::define<double>( "pos_z_res", npixels, "nhits_res" );
 
     parameter.electronics_noise = get_parameter<double>("electronics_noise");
-    
+    parameter.is_enabled_randomize = get_parameter<int>("use_randomize_energy");
+
+    gRandom->SetSeed( get_parameter<int>("random_seed") );
     return anl::ANL_OK;
 }
 
@@ -185,12 +191,14 @@ int ApplyEnergyResponse::mod_endrun()
 double ApplyEnergyResponse::randomize_energy_cathode
 (double energy, double electronics_noise, const std::string& mate)
 {
+    if ( parameter.is_enabled_randomize==false ) return energy;
     auto de = energy_resolution_cathode(energy, electronics_noise, mate);
     return gRandom->Gaus(energy, de/2.35);
 }
 double ApplyEnergyResponse::randomize_energy_anode
 (double energy, double electronics_noise, const std::string& mate)
 {
+    if ( parameter.is_enabled_randomize==false ) return energy;
     auto de = energy_resolution_anode(energy, electronics_noise, mate);
     return gRandom->Gaus(energy, de/2.35);
 }

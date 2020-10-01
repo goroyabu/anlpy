@@ -221,9 +221,9 @@ int JudgeTrigger::mod_ana()
     auto pos_y_in = bnk::getv<double>("pos_y_str");
     
     if ( is_coin_si_cd(detid_x_in)==false && is_enabled_si_cdte_coincidence ) {
-	bnk::put<int>("nhits_x_trg", 0);
-	bnk::put<int>("nhits_y_trg", 0);
-	return anl::ANL_SKIP;
+    	bnk::put<int>("nhits_x_trg", 0);
+    	bnk::put<int>("nhits_y_trg", 0);
+    	return anl::ANL_SKIP;
     }
     
     bnk::put<int>( "nhits_x_trg", nhits_x_in);

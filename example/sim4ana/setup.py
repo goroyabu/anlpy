@@ -62,7 +62,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='sim4ana',
-    version='0.0.1',
+    version='0.0.2',
     author='USER',
     author_email='',
     description='',

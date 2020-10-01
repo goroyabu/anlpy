@@ -139,6 +139,8 @@ int DSDdatabase::mod_bgnrun()
         if( posx>maxinfo.posx ) maxinfo.posx = posx;
         if( posy>maxinfo.posy ) maxinfo.posy = posy;
         if( posz>maxinfo.posz ) maxinfo.posz = posz;
+	if( widthx>maxinfo.widthx ) maxinfo.widthx = widthx;
+        if( widthy>maxinfo.widthy ) maxinfo.widthy = widthy;
         if( asicid<mininfo.asicid ) mininfo.asicid = asicid;
         if( detid<mininfo.detid ) mininfo.detid = detid;
         if( stripid<mininfo.stripid ) mininfo.stripid = stripid;
@@ -152,6 +154,33 @@ int DSDdatabase::mod_bgnrun()
     list_of_asicid  = this->GetListOfAsicids();
     list_of_detid   = this->GetListOfDetids();
     list_of_stripid = this->GetListOfStrips();
+
+    auto nstrips_1side = (int)list_of_stripid.size()/(int)list_of_detid.size();
+    auto posx_lower_end = mininfo.posx - maxinfo.widthx*0.5;
+    auto posx_upper_end = maxinfo.posx + maxinfo.widthx*0.5;
+    auto posy_lower_end = mininfo.posy - maxinfo.widthy*0.5;
+    auto posy_upper_end = maxinfo.posy + maxinfo.widthy*0.5;
+    
+    bnk::define<int>( "DSDinfo_nstrips_x" );
+    bnk::define<int>( "DSDinfo_nstrips_y" );
+    bnk::define<double>( "DSDinfo_xmin" );
+    bnk::define<double>( "DSDinfo_xmax" );
+    bnk::define<double>( "DSDinfo_ymin" );
+    bnk::define<double>( "DSDinfo_ymax" );
+
+    bnk::put<int>( "DSDinfo_nstrips_x", nstrips_1side );
+    bnk::put<int>( "DSDinfo_nstrips_y", nstrips_1side );
+    bnk::put<double>( "DSDinfo_xmin", posx_lower_end );
+    bnk::put<double>( "DSDinfo_xmax", posx_upper_end );
+    bnk::put<double>( "DSDinfo_ymin", posy_lower_end );
+    bnk::put<double>( "DSDinfo_ymax", posy_upper_end );
+
+    std::cout << "DSDinfo_nstrips_x : " << nstrips_1side << std::endl;
+    std::cout << "DSDinfo_nstrips_y : " << nstrips_1side << std::endl;
+    std::cout << "DSDinfo_xmin      : " << posx_lower_end << std::endl;
+    std::cout << "DSDinfo_xmax      : " << posx_upper_end << std::endl;
+    std::cout << "DSDinfo_ymin      : " << posy_lower_end << std::endl;
+    std::cout << "DSDinfo_ymax      : " << posy_upper_end << std::endl;
     
     /** This function is called at the begging of the run **/
     // cout << mod_name2() << "::mod_bgnrun()";

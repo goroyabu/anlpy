@@ -33,6 +33,7 @@ private:
 
     struct parameter_list
     {
+	bool is_enabled_randomize;
 	double electronics_noise;
     } parameter;
     

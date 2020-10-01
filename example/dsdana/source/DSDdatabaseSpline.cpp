@@ -15,6 +15,8 @@ using std::endl;
 #include <fstream>
 #include <sstream>
 
+#include <bnk.hpp>
+
 DSDdatabaseSpline::DSDdatabaseSpline()
 //: anl::VANL_Module("DSDdatabaseSpline", "1.0")
     :DSDdatabase()
@@ -25,6 +27,7 @@ DSDdatabaseSpline::DSDdatabaseSpline()
     set_parameter<std::string>("module_version", "Spline1.0");
     set_parameter<std::string>("copyid", "Spline");
     define_parameter<std::string>("root_file", "db_spline.root");
+    define_parameter<int>("verbose_level", 0);
 }
 
 DSDdatabaseSpline::~DSDdatabaseSpline()
@@ -117,7 +120,7 @@ int DSDdatabaseSpline::mod_bgnrun()
 	gain_curve_spline3[ stripid ] = spl;
 
         database.emplace_back(temp);
-        temp->print();
+        if ( get_parameter<int>("verbose_level")>0 ) temp->print();
 
 	if( asicid>maxinfo.asicid ) maxinfo.asicid = asicid;
 	if( detid>maxinfo.detid ) maxinfo.detid = detid;
@@ -125,6 +128,8 @@ int DSDdatabaseSpline::mod_bgnrun()
         if( posx>maxinfo.posx ) maxinfo.posx = posx;
         if( posy>maxinfo.posy ) maxinfo.posy = posy;
         if( posz>maxinfo.posz ) maxinfo.posz = posz;
+	if( widthx>maxinfo.widthx ) maxinfo.widthx = widthx;
+	if( widthy>maxinfo.widthy ) maxinfo.widthy = widthy;
         if( asicid<mininfo.asicid ) mininfo.asicid = asicid;
         if( detid<mininfo.detid ) mininfo.detid = detid;
         if( stripid<mininfo.stripid ) mininfo.stripid = stripid;
@@ -138,6 +143,33 @@ int DSDdatabaseSpline::mod_bgnrun()
     list_of_asicid  = this->GetListOfAsicids();
     list_of_detid   = this->GetListOfDetids();
     list_of_stripid = this->GetListOfStrips();
+    
+    auto nstrips_1side = (int)( (int)list_of_stripid.size()/(int)list_of_detid.size()/2 );
+    auto posx_lower_end = mininfo.posx - maxinfo.widthx*0.5;
+    auto posx_upper_end = maxinfo.posx + maxinfo.widthx*0.5;
+    auto posy_lower_end = mininfo.posy - maxinfo.widthy*0.5;
+    auto posy_upper_end = maxinfo.posy + maxinfo.widthy*0.5;
+
+    bnk::define<int>( "DSDinfo_nstrips_x" );
+    bnk::define<int>( "DSDinfo_nstrips_y" );
+    bnk::define<double>( "DSDinfo_xmin" );
+    bnk::define<double>( "DSDinfo_xmax" );
+    bnk::define<double>( "DSDinfo_ymin" );
+    bnk::define<double>( "DSDinfo_ymax" );
+
+    bnk::put<int>( "DSDinfo_nstrips_x", nstrips_1side );
+    bnk::put<int>( "DSDinfo_nstrips_y", nstrips_1side );
+    bnk::put<double>( "DSDinfo_xmin", posx_lower_end );
+    bnk::put<double>( "DSDinfo_xmax", posx_upper_end );
+    bnk::put<double>( "DSDinfo_ymin", posy_lower_end );
+    bnk::put<double>( "DSDinfo_ymax", posy_upper_end );
+
+    std::cout << "DSDinfo_nstrips_x : " << nstrips_1side << std::endl;	
+    std::cout << "DSDinfo_nstrips_y : " << nstrips_1side << std::endl;	
+    std::cout << "DSDinfo_xmin      : " << posx_lower_end << std::endl;
+    std::cout << "DSDinfo_xmax      : " << posx_upper_end << std::endl;
+    std::cout << "DSDinfo_ymin      : " << posy_lower_end << std::endl;
+    std::cout << "DSDinfo_ymax      : " << posy_upper_end << std::endl;
     
     root_file->Close();
     ifs.close();

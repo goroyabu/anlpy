@@ -493,10 +493,19 @@ int HistogramCompton::mod_ana()
     
     auto epi_total_compton = epi_si + epi_cdte;
     bnk::put<double>( "epi_total_compton", epi_total_compton );
-    
+
+    // cout << "old si=" << pos_x_si << "," << pos_y_si << " cdte=" << pos_x_cdte << "," << pos_y_cdte << endl;
+    // pos_x_si   = -1*pos_x_si   + 0.250;
+    // pos_x_cdte = -1*pos_x_cdte + 0.250;
+    // pos_y_si   = pos_y_si      - 0.250;
+    // pos_y_cdte = pos_y_cdte    - 0.250;
+    // cout << "new si=" << pos_x_si << "," << pos_y_si << " cdte=" << pos_x_cdte << "," << pos_y_cdte << endl;
+
     TVector3 pos_orig = parameter.source_origin;
     TVector3 pos_scat( pos_x_si, pos_y_si, pos_z_si );
-    TVector3 pos_abso( pos_x_cdte, pos_y_cdte, pos_z_cdte );   
+    TVector3 pos_abso( pos_x_cdte, pos_y_cdte, pos_z_cdte );
+    // TVector3 pos_scat( pos_x_si, pos_y_si, 41.35 - pos_z_si );
+    // TVector3 pos_abso( pos_x_cdte, pos_y_cdte, 41.35 - pos_z_cdte );   
     auto theta_geometric = angle_of_3points( pos_orig, pos_scat, pos_abso );
     // bnk::put<double>( "theta_geometric", theta_geometric );
     

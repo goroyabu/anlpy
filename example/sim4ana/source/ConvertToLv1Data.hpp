@@ -23,33 +23,90 @@ public:
 
 private:
 
+    // inline std::vector<int>convert_stripid_x
+    // (int nhits, const std::vector<int>& detid, const std::vector<int>& stripid)
+    // {
+    // 	std::vector<int> new_array;
+    // 	for ( int ihit=0; ihit<nhits; ++ihit) {
+    // 	    auto new_stripid = detid[ihit] * (nstrips_x+nstrips_y)
+    // 		+ nstrips_x - stripid[ihit] -1;
+    // 	    // - 1;
+    // 	    // auto new_stripid = detid[ihit] * 256 + stripid[ihit] - 1;
+    // 	    // std::cout << detid[ihit] << " " << stripid[ihit];
+    // 	    // std::cout << " -> " << new_stripid << std::endl;
+    // 	    new_array.emplace_back( new_stripid );
+    // 	}
+    // 	return new_array;
+    // }
+    // inline std::vector<int>convert_stripid_y
+    // (int nhits, const std::vector<int>& detid, const std::vector<int>& stripid)
+    // {
+    // 	std::vector<int> new_array;
+    // 	for ( int ihit=0; ihit<nhits; ++ihit) {
+    // 	    // auto asicid = 7 - (int)(stripid[ihit] - 1)/32;
+    // 	    // auto asicch = (int)(stripid[ihit] - 1)%32;
+    // 	    // auto new_stripid = detid[ihit] * 256 + asicid*32 + asicch;
+    // 	    // auto new_stripid = detid[ihit] * 256 + 128 + stripid[ihit] - 1;
+    // 	    // std::cout << detid[ihit] << " " << stripid[ihit];
+    // 	    // std::cout << " -> " << new_stripid << std::endl;
+    // 	    auto new_stripid = detid[ihit] * (nstrips_x+nstrips_y)
+    // 		+ nstrips_x + nstrips_y - stripid[ihit] -1;
+    // 	    new_array.emplace_back( new_stripid );
+    // 	}
+    // 	return new_array;
+    // }
+
+    inline int get_stripid_x(double pos)
+    {
+	if ( pos<this->xaxis_min ) return -1;	
+	for ( int id=0; id<this->nstrips_x; ++id ) {
+	    auto pos_rel = pos - this->xaxis_min;
+	    if ( id*strip_pitch_x<=pos_rel && pos_rel<(id+1)*strip_pitch_x )
+		return id;
+	}
+	return -1;
+    }
+    inline int get_stripid_y(double pos)
+    {
+	if ( pos<this->yaxis_min ) return -1;	
+	for ( int id=0; id<this->nstrips_y; ++id ) {
+	    auto pos_rel = pos - this->yaxis_min;
+	    if ( id*strip_pitch_y<=pos_rel && pos_rel<(id+1)*strip_pitch_y )
+		return id;
+	}
+	return -1;
+    }
+    
     inline std::vector<int>convert_stripid_x
-    (int nhits, const std::vector<int>& detid, const std::vector<int>& stripid)
+    (int nhits, const std::vector<int>& detid, const std::vector<double>& pos)
     {
 	std::vector<int> new_array;
-	for ( int ihit=0; ihit<nhits; ++ihit) {	    
-	    auto new_stripid = detid[ihit] * 256 + stripid[ihit] - 1;
-	    // std::cout << detid[ihit] << " " << stripid[ihit];
-	    // std::cout << " -> " << new_stripid << std::endl;
+	for ( int ihit=0; ihit<nhits; ++ihit) {
+	    auto stripid = get_stripid_x( pos[ihit] );
+	    auto new_stripid = detid[ihit] * (nstrips_x+nstrips_y)
+		+ nstrips_x - stripid -1;
 	    new_array.emplace_back( new_stripid );
 	}
 	return new_array;
     }
     inline std::vector<int>convert_stripid_y
-    (int nhits, const std::vector<int>& detid, const std::vector<int>& stripid)
+    (int nhits, const std::vector<int>& detid, const std::vector<double>& pos)
     {
 	std::vector<int> new_array;
 	for ( int ihit=0; ihit<nhits; ++ihit) {
-	    auto asicid = 7 - (int)(stripid[ihit] - 1)/32;
-	    auto asicch = (int)(stripid[ihit] - 1)%32;
-	    auto new_stripid = detid[ihit] * 256 + asicid*32 + asicch;
-	    // auto new_stripid = detid[ihit] * 256 + 128 + stripid[ihit] - 1;
-	    // std::cout << detid[ihit] << " " << stripid[ihit];
-	    // std::cout << " -> " << new_stripid << std::endl;	    
+	    auto stripid = get_stripid_y( pos[ihit] );
+	    auto new_stripid = detid[ihit] * (nstrips_x+nstrips_y)
+		+ nstrips_x + nstrips_y - stripid -1;
 	    new_array.emplace_back( new_stripid );
 	}
 	return new_array;
-    }    
+    }
+
+    
+    int nstrips_x, nstrips_y;
+    double xaxis_min, xaxis_max;
+    double yaxis_min, yaxis_max;
+    double strip_pitch_x, strip_pitch_y;
 };
 
 #endif
