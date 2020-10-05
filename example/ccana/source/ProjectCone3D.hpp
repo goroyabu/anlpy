@@ -206,7 +206,8 @@ public:
     }
     static inline bool is_cdte(int detid)
     {
-	return detid==10 || detid==11 || detid==12;
+	return !is_si(detid);
+	// return detid==10 || detid==11 || detid==12;
     }
     
     inline double eval_theta(double scat, double abso)
