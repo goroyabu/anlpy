@@ -30,6 +30,7 @@ BeginG4TreeAnalysis::BeginG4TreeAnalysis()
 {
     /** Parameters can be modified via a method 'SetParameter' in Python **/
     // define_parameter<std::string>("input_file", "input.txt");
+    define_parameter<int>( "convert_to_lv3_data", 0 );
 }
 BeginG4TreeAnalysis::~BeginG4TreeAnalysis()
 {
@@ -38,9 +39,12 @@ BeginG4TreeAnalysis::~BeginG4TreeAnalysis()
 int BeginG4TreeAnalysis::mod_bgnrun()
 {
     /** This function is called at the begging of the run **/
-    cout << mod_name2() << "::mod_bgnrun()";
-    cout << " -> Hello! :D" << endl;
+    // cout << mod_name2() << "::mod_bgnrun()";
+    // cout << " -> Hello! :D" << endl;
 
+    parameter.is_enabled_convert_to_lv3_data
+	= get_parameter<int>( "convert_to_lv3_data" );
+    
     /** Example of operations described here **/
 
     /** Opening files **/
@@ -71,7 +75,38 @@ int BeginG4TreeAnalysis::mod_bgnrun()
     bnk::define<double>( "pixel_center_x_raw", npixels, "nhits_raw" );
     bnk::define<double>( "pixel_center_y_raw", npixels, "nhits_raw" );
     bnk::define<double>( "pixel_center_z_raw", npixels, "nhits_raw" );
+    
+    if ( parameter.is_enabled_convert_to_lv3_data==false ) return anl::ANL_OK;
+    
+    bnk::define<int>  ("nhit_lv3",             1);
+    bnk::define<int>  ("detid_lv3",          128);
+    bnk::define<float>("epi_lv3",            128);
+    bnk::define<float>("epi_x_lv3",          128);
+    bnk::define<float>("epi_y_lv3",          128);
+    bnk::define<float>("pos_x_lv3",          128);
+    bnk::define<float>("pos_y_lv3",          128);
+    bnk::define<float>("pos_z_lv3",          128);
+    bnk::define<float>("width_x_lv3",        128);
+    bnk::define<float>("width_y_lv3",        128);
+    bnk::define<float>("width_z_lv3",        128);
+    // bnk::define<int>  ("n_lv2signal_x_lv3",    1);
+    // bnk::define<int>  ("n_lv2signal_y_lv3",    1);
+    // bnk::define<int>  ("lv2signal_id_x_lv3", 128);
+    // bnk::define<int>  ("lv2signal_id_y_lv3", 128);
 
+    bnk::setkeytosize<int>("detid_lv3", "nhit_lv3");
+    bnk::setkeytosize<float>("epi_lv3", "nhit_lv3");
+    bnk::setkeytosize<float>("epi_x_lv3", "nhit_lv3");
+    bnk::setkeytosize<float>("epi_y_lv3", "nhit_lv3");
+    bnk::setkeytosize<float>("pos_x_lv3", "nhit_lv3");
+    bnk::setkeytosize<float>("pos_y_lv3", "nhit_lv3");
+    bnk::setkeytosize<float>("pos_z_lv3", "nhit_lv3");
+    bnk::setkeytosize<float>("width_x_lv3", "nhit_lv3");
+    bnk::setkeytosize<float>("width_y_lv3", "nhit_lv3");
+    bnk::setkeytosize<float>("width_z_lv3", "nhit_lv3");
+    // bnk::setkeytosize<int>("lv2signal_id_x_lv3", "n_lv2signal_x_lv3");
+    // bnk::setkeytosize<int>("lv2signal_id_y_lv3", "n_lv2signal_y_lv3");
+    
     // evs::define( "exist_raw_signals" ); 
     
     // bnk::define<int>( "nhits_dif" );
@@ -127,6 +162,55 @@ int BeginG4TreeAnalysis::mod_ana()
     bnk::put<double>( "pixel_center_x_raw", bnk::getv<double>( "pixel_center_x" ), 0, nhits );
     bnk::put<double>( "pixel_center_y_raw", bnk::getv<double>( "pixel_center_y" ), 0, nhits );
     bnk::put<double>( "pixel_center_z_raw", bnk::getv<double>( "pixel_center_z" ), 0, nhits );
+
+    if ( parameter.is_enabled_convert_to_lv3_data==false ) return anl::ANL_OK;
+    
+    auto edep = bnk::getv<double>( "edep" );
+    auto pos_x = bnk::getv<double>( "pos_x" );
+    auto pos_y = bnk::getv<double>( "pos_y" );
+    auto pos_z = bnk::getv<double>( "pos_z" );
+    auto dir_x = bnk::getv<double>( "dir_x" );
+    auto dir_y = bnk::getv<double>( "dir_y" );
+    auto dir_z = bnk::getv<double>( "dir_z" );
+    auto pixel_center_x = bnk::getv<double>( "pixel_center_x" );
+    auto pixel_center_y = bnk::getv<double>( "pixel_center_y" );
+    auto pixel_center_z = bnk::getv<double>( "pixel_center_z" );
+    
+    // std::vector<double> width_x, width_y, width_z;
+    std::vector<float> edep_f;
+    std::vector<float> pos_x_f, pos_y_f, pos_z_f;
+    std::vector<float> dir_x_f, dir_y_f, dir_z_f;
+    std::vector<float> width_x_f, width_y_f, width_z_f;
+    
+    for ( int index=0; index<nhits; ++index ) {
+	edep_f.emplace_back( edep[index] );
+	pos_x_f.emplace_back( pos_x[index] );
+	pos_y_f.emplace_back( pos_y[index] );
+	pos_z_f.emplace_back( pos_z[index] );
+	dir_x_f.emplace_back( dir_x[index] );
+	dir_y_f.emplace_back( dir_y[index] );
+	dir_z_f.emplace_back( dir_z[index] );
+	width_x_f.emplace_back( 0.250 );	
+	width_y_f.emplace_back( 0.250 );
+	width_z_f.emplace_back( 0.750 );	
+    }    
+    
+    bnk::put<int>  ( "nhit_lv3",    nhits );
+    bnk::put<int>  ( "detid_lv3",   detid,     0, nhits );
+    bnk::put<float>( "epi_lv3",     edep_f,    0, nhits );
+    bnk::put<float>( "epi_x_lv3",   edep_f,    0, nhits );
+    bnk::put<float>( "epi_y_lv3",   edep_f,    0, nhits );
+    bnk::put<float>( "pos_x_lv3",   pos_x_f,   0, nhits );
+    bnk::put<float>( "pos_y_lv3",   pos_y_f,   0, nhits );
+    bnk::put<float>( "pos_z_lv3",   pos_z_f,   0, nhits );
+    bnk::put<float>( "width_x_lv3", width_x_f, 0, nhits );
+    bnk::put<float>( "width_y_lv3", width_y_f, 0, nhits );
+    bnk::put<float>( "width_z_lv3", width_z_f, 0, nhits );       
+    // bnk::put<int>  ("n_lv2signal_x_lv3", m_n_lv2signal_x_lv3);
+    // bnk::put<int>  ("n_lv2signal_y_lv3", m_n_lv2signal_y_lv3);
+    // bnk::put<int>  ("lv2signal_id_x_lv3", m_lv2signal_id_x_lv3, 0, m_n_lv2signal_x_lv3);
+    // bnk::put<int>  ("lv2signal_id_y_lv3", m_lv2signal_id_y_lv3, 0, m_n_lv2signal_y_lv3);
+
     
     /** This function is called at every events **/
     // cout << mod_name2() << "::mod_ana()" << endl;

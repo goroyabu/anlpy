@@ -19,6 +19,17 @@ public:
     int mod_bgnrun() override;
     int mod_ana() override;
     int mod_endrun() override;
+
+private:
+
+    struct parameter_list
+    {
+	bool is_enabled_convert_to_lv3_data;
+
+    } parameter;
+	
+
+    
 };
 
 #endif
