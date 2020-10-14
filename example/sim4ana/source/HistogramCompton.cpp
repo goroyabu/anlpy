@@ -180,6 +180,7 @@ HistogramCompton::HistogramCompton()
     th2_energy_vs_energy = nullptr;
 
     define_parameter<double>("energy_window_half", 3.0);
+    define_parameter<double>("theta_window_max", 150.0);
     define_parameter<std::string>("incident_energy_list", "511.0,31.0");
 
     define_parameter<double>("source_origin_x", 0);
@@ -242,6 +243,7 @@ int HistogramCompton::mod_bgnrun()
     th2_hit_pattern_ecut = new histo2d_hitpattern("_ecut");
 
     parameter.energy_window_half = get_parameter<double>("energy_window_half");
+    parameter.theta_window_max = get_parameter<double>("theta_window_max");
     
     auto elist
 	= split_to_double( get_parameter<std::string>("incident_energy_list") );
@@ -509,12 +511,15 @@ int HistogramCompton::mod_ana()
     auto theta_geometric = angle_of_3points( pos_orig, pos_scat, pos_abso );
     // bnk::put<double>( "theta_geometric", theta_geometric );
     
-    static const double theta_max = 150.0;
-    if ( theta_geometric<0.0 || theta_max<theta_geometric ) return anl::ANL_OK;    
+    // static const double theta_max = 150.0;
+    if ( theta_geometric<0.0 || parameter.theta_window_max<theta_geometric )
+	return anl::ANL_OK;    
     evs::set( "Reasonable_Angle_Geom" );
 
     auto theta_kinetic = compton_angle( epi_si, epi_cdte );
-    if ( theta_kinetic<0.0 || theta_max<theta_kinetic ) return anl::ANL_OK;
+    // cout << epi_si << " " << epi_cdte << " " << theta_kinetic << endl;
+    if ( theta_kinetic<0.0 || parameter.theta_window_max<theta_kinetic )
+	return anl::ANL_OK;
     evs::set( "Reasonable_Angle_Kine" );
 
     th1_total_energy_spectra_comtpon->Fill( epi_total_compton );
@@ -531,7 +536,8 @@ int HistogramCompton::mod_ana()
     	    auto theta_kinetic_peak = compton_angle( epi_scat, epi_abso );
     	    // bnk::put<double>( "theta_kinetic", theta_kinetic );
 	    
-    	    if ( theta_kinetic_peak<0.0 || theta_max<theta_kinetic_peak )
+    	    if ( theta_kinetic_peak<0.0 ||
+		 parameter.theta_window_max<theta_kinetic_peak )
     	    	continue;	    
     	    evs::set( "Si_CdTe_Compton_Event" );
 

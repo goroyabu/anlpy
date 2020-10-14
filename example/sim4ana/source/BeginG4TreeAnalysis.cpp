@@ -77,6 +77,8 @@ int BeginG4TreeAnalysis::mod_bgnrun()
     bnk::define<double>( "pixel_center_z_raw", npixels, "nhits_raw" );
     
     if ( parameter.is_enabled_convert_to_lv3_data==false ) return anl::ANL_OK;
+
+    std::cout << "> Lv.3 branches are defined by BeginG4TreeAnalysis" << std::endl; 
     
     bnk::define<int>  ("nhit_lv3",             1);
     bnk::define<int>  ("detid_lv3",          128);

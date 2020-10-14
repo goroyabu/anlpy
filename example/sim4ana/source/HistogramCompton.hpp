@@ -76,6 +76,7 @@ private:
     {	
 	std::vector<double> incident_energy_list;    
 	double energy_window_half;
+	double theta_window_max;
 
 	TVector3 source_origin;
 
