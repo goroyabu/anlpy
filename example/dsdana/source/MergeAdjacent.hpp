@@ -116,7 +116,7 @@ private:
     float uniform_ethre_si;
     float uniform_ethre_cdte;
     
-    float energy_threshold(int material, int stripid)
+    float energy_threshold(int material, std::pair<int,int> detid_stripid)
     {
 	static const int materialid_si   = 0;
 	static const int materialid_cdte = 1;
@@ -128,7 +128,7 @@ private:
 	    return uniform_ethre_si;
 	else if ( material==materialid_cdte && enable_uniform_ethre_cdte )
 	    return uniform_ethre_cdte;
-	return mDatabase->GetEthre( stripid );			
+	return mDatabase->GetEthre( detid_stripid );			
     }
     
 };

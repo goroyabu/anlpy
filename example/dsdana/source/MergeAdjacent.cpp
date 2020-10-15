@@ -306,12 +306,18 @@ int MergeAdjacent::extractSignalsOverThreshold()
     int i = m_nsignal_x_lv1 - 1;
     for(; i>=0; --i){
 
-	auto detid = mDatabase->GetDetid( m_lv1data_x_list[i].stripid );	
+	// auto detid = mDatabase->GetDetid( m_lv1data_x_list[i].stripid );
+	auto detid = m_lv1data_x_list[i].detid;
+	auto stripid = m_lv1data_x_list[i].stripid;
+	auto detid_stripid = std::make_pair(detid, stripid);
 	nsignal_lv1_on_1det[detid].first++;
 	
 	//auto ethre = mDatabase->GetEthre( m_lv1data_x_list[i].stripid );
-	auto mate = mDatabase->GetMaterial( m_lv1data_x_list[i].stripid );
-	auto ethre = energy_threshold( mate, m_lv1data_x_list[i].stripid );
+	// auto mate = mDatabase->GetMaterial( m_lv1data_x_list[i].stripid );
+	// auto ethre = energy_threshold( mate, m_lv1data_x_list[i].stripid );
+	auto mate = mDatabase->GetMaterial( detid_stripid );
+	auto ethre = energy_threshold( mate, detid_stripid );
+	// cout << mate << " " << detid << "," << stripid << endl; 
 	// if ( m_lv1data_x_list[i].stripid>511 )
 	//     cout << "mate,stripid,ethre=" << mate << " " << m_lv1data_x_list[i].stripid << " " << ethre << endl;
 
@@ -324,12 +330,17 @@ int MergeAdjacent::extractSignalsOverThreshold()
     i = m_nsignal_y_lv1 - 1;
     for(; i>=0; --i){
 
-	auto detid = mDatabase->GetDetid( m_lv1data_y_list[i].stripid );
+	// auto detid = mDatabase->GetDetid( m_lv1data_y_list[i].stripid );
+	auto detid = m_lv1data_y_list[i].detid;
+	auto stripid = m_lv1data_y_list[i].stripid;
+	auto detid_stripid = std::make_pair(detid, stripid);
 	nsignal_lv1_on_1det[detid].second++;
 	
 	//auto ethre = mDatabase->GetEthre( m_lv1data_y_list[i].stripid );
-	auto mate = mDatabase->GetMaterial( m_lv1data_y_list[i].stripid );
-	auto ethre = energy_threshold( mate, m_lv1data_y_list[i].stripid );
+	auto mate = mDatabase->GetMaterial( detid_stripid );
+	auto ethre = energy_threshold( mate, detid_stripid );
+	// auto mate = mDatabase->GetMaterial( m_lv1data_y_list[i].stripid );
+	// auto ethre = energy_threshold( mate, m_lv1data_y_list[i].stripid );
 	if( m_lv1data_y_list[i].epi < ethre ){
 	    m_lv1data_y_list.erase(m_lv1data_y_list.begin() + i);
 	    --m_nsignal_y_lv1;
@@ -419,13 +430,20 @@ int MergeAdjacent::fillHistogram(std::vector<lv1data> &data_list)
 	detid = data_list[i].detid;
 	stripid = data_list[i].stripid;
 	epi = data_list[i].epi;
-
-	if( mDatabase->IsXside(stripid) ){
-            pos = mDatabase->GetPosx( stripid );
-            width = mDatabase->GetWidthx( stripid );
+	auto detid_stripid = std::make_pair( detid, stripid );
+	
+	if( mDatabase->IsXside( detid_stripid ) ){
+	    pos = mDatabase->GetPosx( detid_stripid );
+            width = mDatabase->GetWidthx( detid_stripid );
+	    // auto id = mDatabase->GetIndex( detid_stripid );
+	    // cout << id << " " << detid << "," << stripid << " " << pos << endl;
+            // pos = mDatabase->GetPosx( stripid );
+            // width = mDatabase->GetWidthx( stripid );
         }else{
-            pos = mDatabase->GetPosy( stripid );
-            width = mDatabase->GetWidthy( stripid );
+            pos = mDatabase->GetPosy( detid_stripid );
+            width = mDatabase->GetWidthy( detid_stripid );
+	    // pos = mDatabase->GetPosy( stripid );
+            // width = mDatabase->GetWidthy( stripid );
         }
         if( m_histogram->GetEntries()==0 ){
             m_histogram->SetBins( 100, pos-(50.5*width), pos+(49.5*width) );

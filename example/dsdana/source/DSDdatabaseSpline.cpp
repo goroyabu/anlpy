@@ -82,6 +82,8 @@ int DSDdatabaseSpline::mod_bgnrun()
         // m_stripid_list.emplace_back(stripid);
 	
         strip_map[ std::make_pair(asicid, asicch) ] = std::make_pair(detid, stripid);
+	detid_stripid_to_index_map[ std::make_pair(detid, stripid) ] = index;
+	// cout << index << " " << detid << "," << stripid << endl;
 
 	// if( !ExistAsicid(asicid) ) m_asicid_list.emplace_back(asicid);
 	// if( !ExistDetid(detid) ) {

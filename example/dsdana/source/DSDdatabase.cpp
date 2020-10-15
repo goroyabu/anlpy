@@ -99,6 +99,8 @@ int DSDdatabase::mod_bgnrun()
         // m_stripid_list.emplace_back(stripid);
 
         strip_map[ std::make_pair(asicid, asicch) ] = std::make_pair(detid, stripid);
+	detid_stripid_to_index_map[ std::make_pair(detid, stripid) ] = index;
+	// cout << index << " " << detid << "," << stripid << endl;
 
 	// if( !ExistAsicid(asicid) ) m_asicid_list.emplace_back(asicid);
 	// if( !ExistDetid(detid) ) {
@@ -318,6 +320,14 @@ int DSDdatabase::GetIndex(const int stripid)
     if ( !ExistStrip(stripid) ) return -1;
     return stripid_to_index_map[stripid];
 }
+int DSDdatabase::GetIndex(const std::pair<int,int>& detid_stripid)
+{
+    auto itr = detid_stripid_to_index_map.find( detid_stripid );
+    if ( itr==detid_stripid_to_index_map.end() ) return -1;
+    
+    return detid_stripid_to_index_map[ detid_stripid ];
+    //std::distance( detid_stripid_to_index_map.begin(), itr );
+}
 DSDdatabase::data_element* DSDdatabase::GetDataElement(const int index)
 {
     if ( index < 0 ) return new data_element();
@@ -380,6 +390,64 @@ float DSDdatabase::GetEPI(const int stripid, const float pha)
 {
     return GetDataElement( GetIndex(stripid) )->epi( pha );
 }
+
+int DSDdatabase::GetAsicid(const std::pair<int,int>& detid_stripid)
+{
+    return GetDataElement( GetIndex(detid_stripid) )->asicid;
+}
+int DSDdatabase::GetAsicch(const std::pair<int,int>& detid_stripid)
+{
+    return GetDataElement( GetIndex(detid_stripid) )->asicch;
+}
+int DSDdatabase::GetDetid(const std::pair<int,int>& detid_stripid)
+{
+    return GetDataElement( GetIndex(detid_stripid) )->detid;
+}
+int DSDdatabase::GetMaterial(const std::pair<int,int>& detid_stripid)
+{
+    return GetDataElement( GetIndex(detid_stripid) )->material;
+}
+float DSDdatabase::GetPosx(const std::pair<int,int>& detid_stripid)
+{
+    return GetDataElement( GetIndex(detid_stripid) )->posx;
+}
+float DSDdatabase::GetPosy(const std::pair<int,int>& detid_stripid)
+{
+    return GetDataElement( GetIndex(detid_stripid) )->posy;
+}
+float DSDdatabase::GetPosz(const std::pair<int,int>& detid_stripid)
+{
+    return GetDataElement( GetIndex(detid_stripid) )->posz;
+}
+float DSDdatabase::GetWidthx(const std::pair<int,int>& detid_stripid)
+{
+    return GetDataElement( GetIndex(detid_stripid) )->widthx;
+}
+float DSDdatabase::GetWidthy(const std::pair<int,int>& detid_stripid)
+{
+    return GetDataElement( GetIndex(detid_stripid) )->widthy;
+}
+float DSDdatabase::GetWidthz(const std::pair<int,int>& detid_stripid)
+{
+    return GetDataElement( GetIndex(detid_stripid) )->widthz;
+}
+float DSDdatabase::GetEthre(const std::pair<int,int>& detid_stripid)
+{
+    return GetDataElement( GetIndex(detid_stripid) )->ethre;
+}
+bool DSDdatabase::IsBadch(const std::pair<int,int>& detid_stripid)
+{
+    return GetDataElement( GetIndex(detid_stripid) )->badch;
+}
+bool DSDdatabase::IsXside(const std::pair<int,int>& detid_stripid)
+{
+    return GetDataElement( GetIndex(detid_stripid) )->is_xside;
+}
+float DSDdatabase::GetEPI(const std::pair<int,int>& detid_stripid, const float pha)
+{
+    return GetDataElement( GetIndex(detid_stripid) )->epi( pha );
+}
+
 int DSDdatabase::GetDetectorPosz(const int detid)
 {
     for ( auto data : database )

@@ -112,6 +112,7 @@ protected:
     data_element mininfo;
 
     std::map< std::pair<int, int>, std::pair<int, int> > strip_map;
+    std::map< std::pair<int, int>, int> detid_stripid_to_index_map;
     std::map<int, int> stripid_to_index_map;
 
     std::vector<int> list_of_asicid;
@@ -157,6 +158,7 @@ public:
        @return -1 if 'stripid' is not found.
     **/
     int GetIndex(const int stripid);
+    int GetIndex(const std::pair<int,int>& detid_stripid);
 
     data_element* GetDataElement(const int index);
     // {
@@ -176,8 +178,22 @@ public:
     float GetEthre(const int stripid);
     bool IsBadch(const int stripid);
     bool IsXside(const int stripid);
-
     virtual float GetEPI(const int stripid, const float pha);
+
+    int GetAsicid(const std::pair<int,int>& detid_stripid);
+    int GetAsicch(const std::pair<int,int>& detid_stripid);
+    int GetDetid(const std::pair<int,int>& detid_stripid);
+    int GetMaterial(const std::pair<int,int>& detid_stripid);
+    float GetPosx(const std::pair<int,int>& detid_stripid);
+    float GetPosy(const std::pair<int,int>& detid_stripid);
+    float GetPosz(const std::pair<int,int>& detid_stripid);
+    float GetWidthx(const std::pair<int,int>& detid_stripid);
+    float GetWidthy(const std::pair<int,int>& detid_stripid);
+    float GetWidthz(const std::pair<int,int>& detid_stripid);
+    float GetEthre(const std::pair<int,int>& detid_stripid);
+    bool IsBadch(const std::pair<int,int>& detid_stripid);
+    bool IsXside(const std::pair<int,int>& detid_stripid);    
+    virtual float GetEPI(const std::pair<int,int>& detid_stripid, const float pha);
 
     int GetDetectorPosz(const int detid);
     int GetDetectorWidthz(const int detid);    
