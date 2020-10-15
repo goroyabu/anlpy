@@ -195,6 +195,7 @@ int MergeAdjacent::bnkDefAll()
 }
 int MergeAdjacent::bnkGetAll()
 {
+    // cout << "get";
     m_nsignal_x_lv1 = bnk::get<int>("nsignal_x_lv1");
     m_nsignal_y_lv1 = bnk::get<int>("nsignal_y_lv1");
     m_detid_x_lv1 = bnk::getv<int>  ("detid_x_lv1");
@@ -212,7 +213,8 @@ int MergeAdjacent::bnkGetAll()
     for(int i=0; i<m_nsignal_y_lv1; ++i){
 	m_lv1data_y_list.emplace_back(lv1data(i, m_detid_y_lv1[i], m_stripid_y_lv1[i], m_epi_y_lv1[i]));
     }
-    
+
+    // cout << " get end" << endl;
     return anl::ANL_OK;
 }
 int MergeAdjacent::bnkPutAll()
@@ -303,42 +305,54 @@ void MergeAdjacent::extractOneDetector(int detid, std::vector<lv1data>& xdata, s
 }
 int MergeAdjacent::extractSignalsOverThreshold()
 {
+    // cout << "ext";
     int i = m_nsignal_x_lv1 - 1;
     for(; i>=0; --i){
 
 	// auto detid = mDatabase->GetDetid( m_lv1data_x_list[i].stripid );
 	auto detid = m_lv1data_x_list[i].detid;
+	// cout << "detid ";
 	auto stripid = m_lv1data_x_list[i].stripid;
+	// cout << "stripid ";
 	auto detid_stripid = std::make_pair(detid, stripid);
+	// cout << "pair ";
 	nsignal_lv1_on_1det[detid].first++;
 	
 	//auto ethre = mDatabase->GetEthre( m_lv1data_x_list[i].stripid );
 	// auto mate = mDatabase->GetMaterial( m_lv1data_x_list[i].stripid );
 	// auto ethre = energy_threshold( mate, m_lv1data_x_list[i].stripid );
+	// cout << "mate ";
 	auto mate = mDatabase->GetMaterial( detid_stripid );
+	// cout << "ethre ";
 	auto ethre = energy_threshold( mate, detid_stripid );
 	// cout << mate << " " << detid << "," << stripid << endl; 
 	// if ( m_lv1data_x_list[i].stripid>511 )
 	//     cout << "mate,stripid,ethre=" << mate << " " << m_lv1data_x_list[i].stripid << " " << ethre << endl;
-
+	
 	if( m_lv1data_x_list[i].epi < ethre ){
 	    m_lv1data_x_list.erase(m_lv1data_x_list.begin() + i);
 	    --m_nsignal_x_lv1;
 	}
     }
+    // cout << "x ok" << endl;
 
     i = m_nsignal_y_lv1 - 1;
     for(; i>=0; --i){
 
 	// auto detid = mDatabase->GetDetid( m_lv1data_y_list[i].stripid );
 	auto detid = m_lv1data_y_list[i].detid;
+	// cout << "detid ";
 	auto stripid = m_lv1data_y_list[i].stripid;
+	// cout << "stripid ";
 	auto detid_stripid = std::make_pair(detid, stripid);
+	// cout << "pair ";
 	nsignal_lv1_on_1det[detid].second++;
 	
 	//auto ethre = mDatabase->GetEthre( m_lv1data_y_list[i].stripid );
 	auto mate = mDatabase->GetMaterial( detid_stripid );
+	// cout << "mate ";
 	auto ethre = energy_threshold( mate, detid_stripid );
+	// cout << "ethre ";
 	// auto mate = mDatabase->GetMaterial( m_lv1data_y_list[i].stripid );
 	// auto ethre = energy_threshold( mate, m_lv1data_y_list[i].stripid );
 	if( m_lv1data_y_list[i].epi < ethre ){
@@ -346,12 +360,16 @@ int MergeAdjacent::extractSignalsOverThreshold()
 	    --m_nsignal_y_lv1;
 	}
     }
+
+    // cout << "y ok";
+    // cout << "fill";
     
-    for ( auto mp : nsignal_lv1_on_1det ) {
-	auto [ detid, p ] = mp;
-	list_of_h2_multi_lv1[ detid ]->Fill( p.first, p.second );
-    }
+    // for ( auto mp : nsignal_lv1_on_1det ) {
+    // 	auto [ detid, p ] = mp;
+    // 	list_of_h2_multi_lv1[ detid ]->Fill( p.first, p.second );
+    // }
     
+    // cout << " ext end" << endl;
     // if( m_nsignal_x_lv1 == 0 && m_nsignal_y_lv1 == 0 ) return anl::ANL_SKIP;
     return anl::ANL_OK;
 }
@@ -422,6 +440,7 @@ int MergeAdjacent::convertLv1toLv2(int detid)
 }
 int MergeAdjacent::fillHistogram(std::vector<lv1data> &data_list)
 {
+    // cout << "fill ";
     int nsignal = (int)data_list.size();
     int index, detid, stripid;
     float epi, pos, width;
@@ -455,6 +474,7 @@ int MergeAdjacent::fillHistogram(std::vector<lv1data> &data_list)
 	    data_list.erase( data_list.begin()+i );
         }	
     }
+    // cout << " fill end" << endl;
     return anl::ANL_OK;
 }
 bool MergeAdjacent::isAdjacent(int stripid, const std::vector<int>& stripid_list)

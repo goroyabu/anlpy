@@ -104,6 +104,17 @@ int ConvertToLv1Data::mod_ana()
     auto strip_y_in = bnk::getv<int>( "strip_y_res" );
     auto edep_y_in = bnk::getv<double>( "edep_y_res" );
     auto pos_y_in = bnk::getv<double>( "pos_y_res" );
+
+    if ( detid_x_in.size() < nhits_x_in ) return anl::ANL_NG;
+    if ( material_x_in.size() < nhits_x_in ) return anl::ANL_NG;
+    if ( strip_x_in.size() < nhits_x_in ) return anl::ANL_NG;
+    if ( edep_x_in.size() < nhits_x_in ) return anl::ANL_NG;
+    if ( pos_x_in.size() < nhits_x_in ) return anl::ANL_NG;
+    if ( detid_y_in.size() < nhits_y_in ) return anl::ANL_NG;
+    if ( material_y_in.size() < nhits_y_in ) return anl::ANL_NG;
+    if ( strip_y_in.size() < nhits_y_in ) return anl::ANL_NG;
+    if ( edep_y_in.size() < nhits_y_in ) return anl::ANL_NG;
+    if ( pos_y_in.size() < nhits_y_in ) return anl::ANL_NG;
     
     bnk::put<int>( "nsignal_x_lv1", nhits_x_in );
     bnk::put<int>( "nsignal_y_lv1", nhits_y_in );
