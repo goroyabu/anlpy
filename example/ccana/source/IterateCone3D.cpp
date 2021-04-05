@@ -573,10 +573,16 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
 	v2v_multiply_elements( prev_elems, &temp_elems );
 
 	auto integral = get_integral( temp_elems );
+    auto integral_of_current_response = get_integral( temp2_elems );
 
-	scale_elements
-	    ( vector_integral_of_response[ current_entry ]/( integral + denominator_offset ),
-	      &temp2_elems );
+	// scale_elements
+	//     ( vector_integral_of_response[ current_entry ]/( integral + denominator_offset ),
+	//       &temp2_elems );
+    if ( integral_of_current_response==0 )
+        std::cout << current_entry << " 0" << std::endl;
+    scale_elements
+        ( integral_of_current_response/( integral + denominator_offset ),
+        &temp2_elems );
 
 	v2v_add_elements( temp2_elems, &new_elems );
 
