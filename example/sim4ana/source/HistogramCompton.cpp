@@ -27,7 +27,7 @@ HistogramCompton::histos_each_layer::histos_each_layer(int detector_id, TString 
     th2_energy_spectra_each_channels
 	= new TH2D( Form("spect2d_ch_detid%d"+subname, detector_id),
 		    Form("detid%d"+subname+";ch(0-127=Pt, 128-255=Al);keV",detector_id),
-		    256, -0.5, 255.5, nbins*0.25, xmin, xmax );
+		    256, -0.5, 255.5, nbins, xmin, xmax );
 
     auto hname = th2_energy_spectra_each_channels->GetName();
 
@@ -43,17 +43,17 @@ HistogramCompton::histos_each_layer::histos_each_layer(int detector_id, TString 
 	= new TH2D( Form("ene_corr_detid%d"+subname, detector_id),
 		    Form("detid%d"+subname+";ave=(Y+X)/2[keV];diff=(Y-X)/2[keV]",
 			 detector_id ),
-		    nbins*0.25, xmin, xmax, 100, -50, 50 );
+		    nbins, xmin, xmax, 100, -50, 50 );
     th2_diff_vs_cathode
 	= new TH2D( Form("ene_diff_cathode_detid%d"+subname, detector_id),
 		    Form("detid%d"+subname+";Cathode(X-side)[keV];diff=(Y-X)/2[keV]",
 			 detector_id ),
-		    nbins*0.25, xmin, xmax, 100, -50, 50 );
+		    nbins, xmin, xmax, 100, -50, 50 );
     th2_diff_vs_anode
 	= new TH2D( Form("ene_diff_anode_detid%d"+subname, detector_id),
 		    Form("detid%d"+subname+";Anode(Y-side)[keV];diff=(Y-X)/2[keV]",
 			 detector_id ),
-		    nbins*0.25, xmin, xmax, 100, -50, 50 );
+		    nbins, xmin, xmax, 100, -50, 50 );
 }
 void HistogramCompton::histos_each_layer::Write()
 {
