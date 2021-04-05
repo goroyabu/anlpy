@@ -383,8 +383,6 @@ void IterateCone3D::v2v_add_elements(const vector3& in, vector3* out)
     for ( auto x=0; x<nx; ++x ) {
 	for ( auto y=0; y<ny; ++y ) {
 	    for ( auto z=0; z<nz; ++z ) {
-            if ( this->is_enabled_2d_reconstruction && z+1==this->index_of_2d_image )
-                continue;
             (*out)[x][y][z] += in[x][y][z];
 	    }
 	}
