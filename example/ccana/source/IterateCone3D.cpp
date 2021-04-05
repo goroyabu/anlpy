@@ -346,8 +346,8 @@ void IterateCone3D::v2h_set_elements
     for ( int x=1; x<=nx; ++x ) {
 	for ( int y=1; y<=ny; ++y ) {
 	    for ( int z=1; z<=nz; ++z ) {
-            if ( this->is_enabled_2d_reconstruction && z!=this->index_of_2d_image )
-                continue;
+            // if ( this->is_enabled_2d_reconstruction && z!=this->index_of_2d_image )
+            //     continue;
             th3->SetBinContent( x, y, z, in[x-1][y-1][z-1] );
 	    }
 	}
@@ -497,8 +497,7 @@ void IterateCone3D::h2v_get_elem_impl
     for ( int x=x1; x<=x2; ++x ) {
 	for ( int y=1; y<=ny; ++y ) {
 	    for ( int z=1; z<=nz; ++z ) {
-            if ( is_2dimage && z==index_of_z )
-                continue;
+            if ( is_2dimage && z!=index_of_z ) continue;
             (*out)[x-1][y-1][z-1] = th3->GetBinContent(x,y,z);
 	    }
 	}
