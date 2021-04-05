@@ -397,12 +397,12 @@ double IterateCone3D::get_integral(const vector3& in)
     // 	    for ( auto&& elem : v1 ) sum += elem;
     for ( auto v2 : in )
         for ( auto v1 : v2 ) {
-            int z = 1;
+            // int z = 1;
             for ( auto elem : v1 ) {
-                if ( this->is_enabled_2d_reconstruction && z!=this->index_of_2d_image )
-                    continue;
+                // if ( this->is_enabled_2d_reconstruction && z!=this->index_of_2d_image )
+                //     continue;
                 sum += elem;
-                z++;
+                // z++;
             }
         }
     return sum;
