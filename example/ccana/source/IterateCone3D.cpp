@@ -346,8 +346,6 @@ void IterateCone3D::v2h_set_elements
     for ( int x=1; x<=nx; ++x ) {
 	for ( int y=1; y<=ny; ++y ) {
 	    for ( int z=1; z<=nz; ++z ) {
-            // if ( this->is_enabled_2d_reconstruction && z!=this->index_of_2d_image )
-            //     continue;
             th3->SetBinContent( x, y, z, in[x-1][y-1][z-1] );
 	    }
 	}
@@ -484,7 +482,7 @@ void IterateCone3D::v2v_divide_elements(const vector3& in, vector3* out)
     for ( auto x=0; x<nx; ++x )
 	for ( auto y=0; y<ny; ++y )
 	    for ( auto z=0; z<nz; ++z ) {
-		if ( in[x][y][z]==0.0 )
+		if ( in[x][y][z]<0.000000001 )
 		    (*out)[x][y][z] = 0.0;
 		else
 		    (*out)[x][y][z] /= in[x][y][z];
@@ -495,12 +493,16 @@ void IterateCone3D::h2v_get_elem_impl
 (TH3F* th3, vector3* out, int x1, int x2, int ny, int nz, bool is_2dimage, int index_of_z)
 {
     for ( int x=x1; x<=x2; ++x ) {
-	for ( int y=1; y<=ny; ++y ) {
-	    for ( int z=1; z<=nz; ++z ) {
-            if ( is_2dimage && z!=index_of_z ) continue;
-            (*out)[x-1][y-1][z-1] = th3->GetBinContent(x,y,z);
-	    }
-	}
+        for ( int y=1; y<=ny; ++y ) {
+            if ( is_2dimage ) {
+                (*out)[x-1][y-1][index_of_z-1] = th3->GetBinContent( x, y, index_of_z );
+            }
+            else {
+                for ( int z=1; z<=nz; ++z ) {
+                    (*out)[x-1][y-1][z-1] = th3->GetBinContent(x,y,z);
+                }
+            }
+        }
     }
 }
 
@@ -564,35 +566,42 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
 
     while ( event.next() ) {
 
-	++current_entry;
+        ++current_entry;
 
-	h2v_get_elements( event.response, &temp_elems );
+	    h2v_get_elements( event.response, &temp_elems );
 
-	temp2_elems = temp_elems;
+        temp2_elems = temp_elems;
 
-	v2v_multiply_elements( prev_elems, &temp_elems );
+        v2v_multiply_elements( prev_elems, &temp_elems );
 
-	auto integral = get_integral( temp_elems );
-    auto integral_of_current_response = get_integral( temp2_elems );
+        auto integral = get_integral( temp_elems );
+        auto integral_of_current_response = get_integral( temp2_elems );
 
-	// scale_elements
-	//     ( vector_integral_of_response[ current_entry ]/( integral + denominator_offset ),
-	//       &temp2_elems );
-    if ( integral_of_current_response==0 )
-        std::cout << current_entry << " 0" << std::endl;
-    scale_elements
-        ( integral_of_current_response/( integral + denominator_offset ),
-        &temp2_elems );
+        // scale_elements
+        //     ( vector_integral_of_response[ current_entry ]/( integral + denominator_offset ),
+        //       &temp2_elems );
 
-	v2v_add_elements( temp2_elems, &new_elems );
+        if ( integral_of_current_response==0.0 )
+            std::cout << current_entry << " 0" << std::endl;
+        if ( integral==0.0 )
+            std::cout << current_entry << " 0" << std::endl;
 
-	//auto multiple = (TH3F*)event.response->Clone();
-	//multiple->Multiply( previous_image );
-	// auto integral = multiple->Integral();
-	// auto tempo = (TH3F*)event.response->Clone();
-	// tempo->Scale( vector_integral_of_response[ current_entry ] /
-	// 	      ( integral + denominator_offset ) );
-	// new_image->Add( tempo );
+        if ( integral==0.0 || integral_of_current_response==0.0 )
+            continue;
+
+        scale_elements
+            ( integral_of_current_response/( integral + denominator_offset ),
+            &temp2_elems );
+
+        v2v_add_elements( temp2_elems, &new_elems );
+
+        //auto multiple = (TH3F*)event.response->Clone();
+        //multiple->Multiply( previous_image );
+        // auto integral = multiple->Integral();
+        // auto tempo = (TH3F*)event.response->Clone();
+        // tempo->Scale( vector_integral_of_response[ current_entry ] /
+        // 	      ( integral + denominator_offset ) );
+        // new_image->Add( tempo );
     }
     cout << "Integration over all events is done." << endl;
 
