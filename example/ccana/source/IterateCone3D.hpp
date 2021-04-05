@@ -60,6 +60,7 @@ public:
 	    tree->SetBranchAddress("response", &response);
 	    nentries = tree->GetEntries();
 	    if ( nentries>0 ) tree->GetEntry(0);
+        set_entry_range( 0, -1 );
 	    return nentries;
 	}
 
