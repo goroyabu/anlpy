@@ -258,7 +258,7 @@ void IterateCone3D::h2v_get_elements
 	for ( int x=1; x<=nbins_xaxis; ++x ) {
 	    for ( int y=1; y<=nbins_yaxis; ++y ) {
 		for ( int z=1; z<=nbins_zaxis; ++z ) {
-            if ( this->is_enabled_2d_reconstruction && z==this->index_of_2d_image )
+            if ( this->is_enabled_2d_reconstruction && z!=this->index_of_2d_image )
                 continue;
             (*out)[x-1][y-1][z-1] = th3->GetBinContent(x,y,z);
 		}
@@ -301,7 +301,7 @@ void IterateCone3D::h2v_add_elements(TH3F* th3, vector3* out)
     for ( int x=1; x<=nx; ++x ) {
 	for ( int y=1; y<=ny; ++y ) {
 	    for ( int z=1; z<=nz; ++z ) {
-            if ( this->is_enabled_2d_reconstruction && z==this->index_of_2d_image )
+            if ( this->is_enabled_2d_reconstruction && z!=this->index_of_2d_image )
                 continue;
             (*out)[x-1][y-1][z-1] += th3->GetBinContent(x,y,z);
 	    }
@@ -346,7 +346,7 @@ void IterateCone3D::v2h_set_elements
     for ( int x=1; x<=nx; ++x ) {
 	for ( int y=1; y<=ny; ++y ) {
 	    for ( int z=1; z<=nz; ++z ) {
-            if ( this->is_enabled_2d_reconstruction && z==this->index_of_2d_image )
+            if ( this->is_enabled_2d_reconstruction && z!=this->index_of_2d_image )
                 continue;
             th3->SetBinContent( x, y, z, in[x-1][y-1][z-1] );
 	    }
@@ -399,7 +399,7 @@ double IterateCone3D::get_integral(const vector3& in)
         for ( auto v1 : v2 ) {
             int z = 1;
             for ( auto elem : v1 ) {
-                if ( this->is_enabled_2d_reconstruction && z==this->index_of_2d_image )
+                if ( this->is_enabled_2d_reconstruction && z!=this->index_of_2d_image )
                     continue;
                 sum += elem;
                 z++;
