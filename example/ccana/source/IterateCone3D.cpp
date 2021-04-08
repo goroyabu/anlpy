@@ -608,6 +608,7 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
 
         if ( this->is_enabled_norm_response_in_imaging_space == true )
             scale_elements( 1/integral_of_current_response, &temp_elems );
+            integral_of_current_response = 1;
 
         temp2_elems = temp_elems;
 
