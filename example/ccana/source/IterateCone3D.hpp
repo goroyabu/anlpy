@@ -19,6 +19,7 @@
 #include <TTree.h>
 #include <TH3F.h>
 #include <TH2D.h>
+#include <TH1D.h>
 
 class IterateCone3D : public anl::VANL_Module
 {
@@ -141,6 +142,11 @@ protected:
 
     /* Mutilple Thread */
     std::vector<std::pair<int,int>> list_of_xbin_ranges;
+
+    TH1D * h1_integral_image_cross_response;
+    TH1D * h1_integral_event_response;
+    TH2D * h2_response_vs_image_cross_response;
+    std::vector<TH3F*> list_of_images_cross_response;
 
     TH3F* next_image(TH3F* previous_image);
 

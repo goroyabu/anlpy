@@ -131,6 +131,17 @@ int IterateCone3D::mod_bgnrun()
 	}
     }
 
+    h1_integral_event_response = new TH1D(
+        "h1_integral_event_response", "integral of event response",
+        3000, -1, 2 );
+    h1_integral_image_cross_response = new TH1D(
+        "h1_integral_image_cross_response", "integral of image cross response",
+        3000, -1, 2 );
+    h2_response_vs_image_cross_response = new TH2D(
+        "h2_response_vs_image_cross_response",
+        ";integral of response;integral of image cross response",
+        300, -1, 2, 300, -1, 2 );
+
     return anl::ANL_OK;
 }
 
@@ -175,6 +186,7 @@ int IterateCone3D::mod_ana()
 	    auto integral = get_integral( temp_elems );
 
 	    vector_integral_of_response.emplace_back( integral );
+        this->h1_integral_event_response->Fill( integral );
 	}
 
 	v2h_set_elements( sbp_elems, sbp_image );
@@ -226,6 +238,16 @@ int IterateCone3D::mod_endrun()
 	for ( auto itr : slices ) itr->Write();
 	image->Write();
     }
+
+    for ( auto image : list_of_images_cross_response ) {
+        auto slices = TH3Slicer::Slice( image );
+        for ( auto itr : slices ) itr->Write();
+        image->Write();
+    }
+
+    this->h1_integral_event_response->Write();
+    this->h1_integral_image_cross_response->Write();
+    this->h2_response_vs_image_cross_response->Write();
 
     output_file->Close();
     // input_file->Close();
@@ -576,6 +598,22 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
 
         auto integral = get_integral( temp_elems );
         auto integral_of_current_response = get_integral( temp2_elems );
+
+        this->h1_integral_image_cross_response->Fill( integral );
+        this->h2_response_vs_image_cross_response
+            ->Fill( integral_of_current_response, integral );
+
+        int n_images_cross_response = list_of_images_cross_response.size();
+        if ( n_images_cross_response < 10 ) {
+            auto image_cross_reponse = (TH3F*)new_image->Clone();
+            image_cross_reponse->Reset();
+            image_cross_reponse->SetName( Form(
+                "image_cross_reponse_iter%03d_e%03d",
+                iteration, n_images_cross_response ) );
+                v2h_set_elements( temp_elems, image_cross_reponse );
+                list_of_images_cross_response
+                    .emplace_back( image_cross_reponse );
+            }
 
         // scale_elements
         //     ( vector_integral_of_response[ current_entry ]/( integral + denominator_offset ),
