@@ -42,6 +42,9 @@ IterateCone3D::IterateCone3D()
     define_parameter<int>("n_threads", 1);
 
     define_parameter<int>("use_sbp_as_efficiency", false);
+
+    define_parameter<int>("use_visibility_in_calculation", true);
+    define_parameter<int>("use_norm_response_in_imaging_space", false);
 }
 IterateCone3D::~IterateCone3D()
 {
@@ -113,6 +116,11 @@ int IterateCone3D::mod_bgnrun()
 	is_enabled_multiple_thread = true;
 	cout << "Multiple Thread Mode is enabled (N=" << n_threads << ")" << endl;
     }
+
+    is_enabled_use_visibility
+        = get_parameter<int>( "use_visibility_in_calculation" );
+    is_enabled_norm_response_in_imaging_space
+        = get_parameter<int>( "use_norm_response_in_imaging_space" );
 
     if ( is_enabled_multiple_thread ) {
 
@@ -595,6 +603,8 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
 
         ++current_entry;
 
+        if ( this->is_enabled_norm_response_in_imaging_space )
+            event.response->Scale( 1/event.response->Integral() );
 	    h2v_get_elements( event.response, &temp_elems );
 
         temp2_elems = temp_elems;
@@ -637,6 +647,9 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
 
         if ( integral==0.0 || integral_of_current_response==0.0 )
             continue;
+
+        if ( this->is_enabled_use_visibility == false )
+            integral_of_current_response = 1.0;
 
         scale_elements
             ( integral_of_current_response/( integral + denominator_offset ),

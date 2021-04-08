@@ -140,6 +140,9 @@ protected:
     int index_of_2d_image;
     bool is_enabled_2d_reconstruction;
 
+    bool is_enabled_use_visibility;
+    bool is_enabled_norm_response_in_imaging_space;
+
     /* Mutilple Thread */
     std::vector<std::pair<int,int>> list_of_xbin_ranges;
 
