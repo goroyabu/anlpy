@@ -244,6 +244,11 @@ int IterateCone3D::mod_endrun()
         for ( auto itr : slices ) itr->Write();
         image->Write();
     }
+    for ( auto image : list_of_event_responses ) {
+        auto slices = TH3Slicer::Slice( image );
+        for ( auto itr : slices ) itr->Write();
+        image->Write();
+    }
 
     this->h1_integral_event_response->Write();
     this->h1_integral_image_cross_response->Write();
@@ -605,14 +610,20 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
 
         int n_images_cross_response = list_of_images_cross_response.size();
         if ( n_images_cross_response < 10 ) {
-            auto image_cross_reponse = (TH3F*)new_image->Clone();
-            image_cross_reponse->Reset();
-            image_cross_reponse->SetName( Form(
-                "image_cross_reponse_iter%03d_e%03d",
+            auto image_cross_response = (TH3F*)new_image->Clone();
+            image_cross_response->Reset();
+            image_cross_response->SetName( Form(
+                "image_cross_response_iter%03d_e%03d",
                 iteration, n_images_cross_response ) );
-                v2h_set_elements( temp_elems, image_cross_reponse );
-                list_of_images_cross_response
-                    .emplace_back( image_cross_reponse );
+            v2h_set_elements( temp_elems, image_cross_response );
+            list_of_images_cross_response
+                .emplace_back( image_cross_response );
+
+            auto event_response = (TH3F*)event.response->Clone();
+            event_response->SetName( Form("event_response_e%03d",
+                n_images_cross_response ) );
+            list_of_event_responses.emplace_back( event_response );
+
             }
 
         // scale_elements

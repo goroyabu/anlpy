@@ -147,6 +147,7 @@ protected:
     TH1D * h1_integral_event_response;
     TH2D * h2_response_vs_image_cross_response;
     std::vector<TH3F*> list_of_images_cross_response;
+    std::vector<TH3F*> list_of_event_responses;
 
     TH3F* next_image(TH3F* previous_image);
 
