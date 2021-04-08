@@ -603,16 +603,17 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
 
         ++current_entry;
 
-        if ( this->is_enabled_norm_response_in_imaging_space )
-            event.response->Scale( 1/event.response->Integral() );
 	    h2v_get_elements( event.response, &temp_elems );
+        auto integral_of_current_response = get_integral( temp_elems );
+
+        if ( this->is_enabled_norm_response_in_imaging_space == true )
+            scale_elements( 1/integral_of_current_response, &temp_elems );
 
         temp2_elems = temp_elems;
 
         v2v_multiply_elements( prev_elems, &temp_elems );
-
         auto integral = get_integral( temp_elems );
-        auto integral_of_current_response = get_integral( temp2_elems );
+        // auto integral_of_current_response = get_integral( temp2_elems );
 
         this->h1_integral_image_cross_response->Fill( integral );
         this->h2_response_vs_image_cross_response
