@@ -515,13 +515,14 @@ void IterateCone3D::v2v_divide_elements(const vector3& in, vector3* out)
     }
 
     for ( auto x=0; x<nx; ++x )
-	for ( auto y=0; y<ny; ++y )
-	    for ( auto z=0; z<nz; ++z ) {
-		if ( in[x][y][z]<0.000000001 )
-		    (*out)[x][y][z] = 0.0;
-		else
-		    (*out)[x][y][z] /= in[x][y][z];
-	    }
+        for ( auto y=0; y<ny; ++y )
+            for ( auto z=0; z<nz; ++z ) {
+                // if ( in[x][y][z]<0.000000001 )
+                if ( in[x][y][z] == 0.0 )
+                    (*out)[x][y][z] = 0.0;
+                else
+                    (*out)[x][y][z] /= in[x][y][z];
+            }
 }
 
 void IterateCone3D::h2v_get_elem_impl
@@ -606,9 +607,11 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
 	    h2v_get_elements( event.response, &temp_elems );
         auto integral_of_current_response = get_integral( temp_elems );
 
-        if ( this->is_enabled_norm_response_in_imaging_space == true )
+        if ( this->is_enabled_norm_response_in_imaging_space == true
+            && integral_of_current_response != 0.0 ) {
             scale_elements( 1/integral_of_current_response, &temp_elems );
             integral_of_current_response = 1;
+        }
 
         temp2_elems = temp_elems;
 
@@ -634,6 +637,8 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
             auto event_response = (TH3F*)event.response->Clone();
             event_response->SetName( Form("event_response_e%03d",
                 n_images_cross_response ) );
+            event_response->Reset();
+            v2h_set_elements( temp2_elems, event_response );
             list_of_event_responses.emplace_back( event_response );
 
             }
