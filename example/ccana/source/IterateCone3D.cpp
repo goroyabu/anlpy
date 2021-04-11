@@ -633,7 +633,8 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
 
         v2v_multiply_elements( prev_elems, &temp_elems );
         auto integral = get_integral( temp_elems );
-        loglikelihood_1st_of_prev_image += std::log( integral );
+        if ( integral!=0.0 )
+            loglikelihood_1st_of_prev_image += std::log( integral );
         // auto integral_of_current_response = get_integral( temp2_elems );
 
         this->h1_integral_image_cross_response->Fill( integral );
@@ -717,7 +718,7 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
         iteration, loglikelihood_2nd_of_prev_image );
     this->g_loglikelihood_sum->SetPoint( g_loglikelihood_sum->GetN(),
         iteration,
-        loglikelihood_1st_of_prev_image + loglikelihood_2nd_of_prev_image );
+        loglikelihood_1st_of_prev_image - loglikelihood_2nd_of_prev_image );
 
     v2h_set_elements( new_elems, new_image );
     return new_image;
