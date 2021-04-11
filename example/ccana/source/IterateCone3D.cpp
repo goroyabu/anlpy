@@ -150,6 +150,16 @@ int IterateCone3D::mod_bgnrun()
         ";integral of response;integral of image cross response",
         300, -1, 2, 300, -1, 2 );
 
+    g_loglikelihood_sum = new TGraph();
+    g_loglikelihood_sum->SetNameTitle(
+        "g_loglikelihood_sum", "loglikelihood" );
+    g_loglikelihood_1st = new TGraph();
+    g_loglikelihood_1st->SetNameTitle(
+        "g_loglikelihood_1st", "loglikelihood 1st term" );
+    g_loglikelihood_2nd = new TGraph();
+    g_loglikelihood_2nd->SetNameTitle(
+        "g_loglikelihood_2nd", "loglikelihood 2nd term" );
+
     return anl::ANL_OK;
 }
 
@@ -261,6 +271,10 @@ int IterateCone3D::mod_endrun()
     this->h1_integral_event_response->Write();
     this->h1_integral_image_cross_response->Write();
     this->h2_response_vs_image_cross_response->Write();
+
+    this->g_loglikelihood_sum->Write();
+    this->g_loglikelihood_1st->Write();
+    this->g_loglikelihood_2nd->Write();
 
     output_file->Close();
     // input_file->Close();
@@ -600,6 +614,8 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
     long current_entry = -1;
     event.init_entry();
 
+    double loglikelihood_1st_of_prev_image = 0.0;
+
     while ( event.next() ) {
 
         ++current_entry;
@@ -617,6 +633,7 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
 
         v2v_multiply_elements( prev_elems, &temp_elems );
         auto integral = get_integral( temp_elems );
+        loglikelihood_1st_of_prev_image += std::log( integral );
         // auto integral_of_current_response = get_integral( temp2_elems );
 
         this->h1_integral_image_cross_response->Fill( integral );
@@ -683,12 +700,24 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
     v2v_multiply_elements( prev_elems, &new_elems );
     cout << "Multiplying by previous image is done." << endl;
 
-    if ( this->is_enabled_use_sbp_as_efficiency==true ) {
-	vector3 sbp_elems;
+    vector3 sbp_elems;
 	h2v_get_elements( sbp_image, &sbp_elems );
+    if ( this->is_enabled_use_sbp_as_efficiency==true ) {
+	// vector3 sbp_elems;
+	// h2v_get_elements( sbp_image, &sbp_elems );
 	v2v_divide_elements( sbp_elems, &new_elems );
 	cout << "Dividing by simple back-projection is done" << endl;
     }
+
+    v2v_multiply_elements( prev_elems, &sbp_elems );
+    double loglikelihood_2nd_of_prev_image = get_integral( sbp_elems );
+    this->g_loglikelihood_1st->SetPoint( g_loglikelihood_1st->GetN(),
+        iteration, loglikelihood_1st_of_prev_image );
+    this->g_loglikelihood_2nd->SetPoint( g_loglikelihood_2nd->GetN(),
+        iteration, loglikelihood_2nd_of_prev_image );
+    this->g_loglikelihood_sum->SetPoint( g_loglikelihood_sum->GetN(),
+        iteration,
+        loglikelihood_1st_of_prev_image + loglikelihood_2nd_of_prev_image );
 
     v2h_set_elements( new_elems, new_image );
     return new_image;

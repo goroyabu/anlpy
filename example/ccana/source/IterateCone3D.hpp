@@ -14,12 +14,14 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#include <cmath>
 
 #include <TFile.h>
 #include <TTree.h>
 #include <TH3F.h>
 #include <TH2D.h>
 #include <TH1D.h>
+#include <TGraph.h>
 
 class IterateCone3D : public anl::VANL_Module
 {
@@ -151,6 +153,10 @@ protected:
     TH2D * h2_response_vs_image_cross_response;
     std::vector<TH3F*> list_of_images_cross_response;
     std::vector<TH3F*> list_of_event_responses;
+
+    TGraph * g_loglikelihood_1st;
+    TGraph * g_loglikelihood_2nd;
+    TGraph * g_loglikelihood_sum;
 
     TH3F* next_image(TH3F* previous_image);
 
