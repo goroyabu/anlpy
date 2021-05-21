@@ -13,6 +13,8 @@
 #include "Iterate2Photon3D.hpp"
 #include "PETimager.hpp"
 
+#include "ProjectConeETCC.hpp"
+
 #include <pybind11/pybind11.h>
 
 PYBIND11_MODULE(ccana, m) {
@@ -96,7 +98,18 @@ PYBIND11_MODULE(ccana, m) {
 	.def("DefineParameter", &PETimager::define_parameter<std::string>)
 	.def("ShowParameter", &PETimager::show_parameters);
 
-    
+    pybind11::class_<ProjectConeETCC, anl::VANL_Module>(m, "ProjectConeETCC")
+	.def(pybind11::init<>())
+	.def("SetParameter", &ProjectConeETCC::set_parameter<int>)
+	.def("SetParameter", &ProjectConeETCC::set_parameter<double>)
+	.def("SetParameter", &ProjectConeETCC::set_parameter<bool>)
+	.def("SetParameter", &ProjectConeETCC::set_parameter<std::string>)
+	.def("DefineParameter", &ProjectConeETCC::define_parameter<int>)
+	.def("DefineParameter", &ProjectConeETCC::define_parameter<double>)
+	.def("DefineParameter", &ProjectConeETCC::define_parameter<bool>)
+	.def("DefineParameter", &ProjectConeETCC::define_parameter<std::string>)
+	.def("ShowParameter", &ProjectConeETCC::show_parameters);
+
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;
 #else
