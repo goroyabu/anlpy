@@ -57,10 +57,10 @@ public:
 	}
 	~resptree_event() {}
 
-	long set_branch_address(TTree* tree)
+	long set_branch_address(TTree* tree,TString input_branch="response")
 	{
 	    this->tree = tree;
-	    tree->SetBranchAddress("response", &response);
+	    tree->SetBranchAddress(input_branch, &response);
 	    nentries = tree->GetEntries();
 	    if ( nentries>0 ) tree->GetEntry(0);
         set_entry_range( 0, -1 );
@@ -90,9 +90,9 @@ public:
 	    // if ( current_entry>=nentries ) return false;
 	    tree->GetEntry(current_entry);
 
-	    if ( current_entry%100==0 ) {
-		std::cout << current_entry << "/" << nentries << std::endl;
-	    }
+	    // if ( current_entry%100==0 ) {
+		// std::cout << current_entry << "/" << nentries << std::endl;
+	    // }
 
 	    return true;
 	}
@@ -126,6 +126,7 @@ protected:
 
     std::vector<double> vector_integral_of_response;
     // std::vector<double> vector_integral_of_multiple;
+    int current_iteration;
 
     /* Parameters */
     int n_of_iterations;

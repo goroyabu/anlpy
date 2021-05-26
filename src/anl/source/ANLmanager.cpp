@@ -17,6 +17,9 @@ using std::flush;
 using std::right;
 using std::left;
 using std::setw;
+using std::fixed;
+using std::setprecision;
+using std::defaultfloat;
 
 anl::ANLmoduleStacker* anl::ANLmanager::module_stacker;
 //anl::ANLmanager* anl::ANLmanager::manager_instance;
@@ -78,7 +81,7 @@ int anl::ANLmanager::show_analysis()
     if ( module_stacker->get_nmodules()==0 ) {
 	return message(1, "ANLmanager::show_analysis", "No module is defined");
     }
-    
+
     cout << endl;
     cout << "      ***************************" << endl;
     cout << "      ***** Analysis chain ******" << endl;
@@ -88,16 +91,19 @@ int anl::ANLmanager::show_analysis()
     module_stacker->show_analysis();
     this->show_parameters();
 
+    cout << "      ***************************" << endl;
+    cout << endl;
+
     return ANL_OK;
 }
 int anl::ANLmanager::read_data(long int nevent, long int print_freq)
 {
     int nmodules = module_stacker->get_nmodules();
-    if ( nmodules==0 ) 
+    if ( nmodules==0 )
 	return message(1, "ANLmanager::show_analysis", "No module is defined");
-    
+
     // auto msec = get_parameter<int>("display_interval_msec");
-    // auto usleep_time = std::chrono::microseconds( msec );    
+    // auto usleep_time = std::chrono::microseconds( msec );
 
     bnk::init();
     bnk::define<long>("ANL_eventid");
@@ -107,11 +113,21 @@ int anl::ANLmanager::read_data(long int nevent, long int print_freq)
     // bnk::put<std::string>("ANLmanager::program_name", program_name);
 
     evs::clear_all();
+    evs::define("ANL_totalevents");
 
     if ( this->call_init_and_his() != ANL_OK ) return ANL_NG;
-    if ( this->call_bgnrun() != ANL_OK ) return ANL_NG;    
+    if ( this->call_bgnrun() != ANL_OK ) return ANL_NG;
+    cout << endl;
+    cout << " --- All mod_bgnrun is OK" << endl;
+    evs::accumulate();
 
-    auto run_status = new ANLmoduleStacker::analysis_status();   
+    auto run_status = new ANLmoduleStacker::analysis_status();
+    cout << endl;
+    cout << " --- Start analysis..." << endl;
+
+    auto nevent_of_data = int(evs::integral("ANL_totalevents"));
+    if ( 0 < nevent_of_data && nevent < 0 )
+        nevent = nevent_of_data;
 
     auto status       = ANL_OK;
     bool run_has_quit = false;
@@ -121,26 +137,33 @@ int anl::ANLmanager::read_data(long int nevent, long int print_freq)
     while ( ++ievent<nevent && run_broke==false ) {
 	//++ievent;
 	bnk::put<long>("ANL_eventid", ievent);
-	
+
 	if ( ievent%print_freq == 0 ) {
-	    cout << ievent << "/" << nevent;
-	    cout << "(" << (double)ievent/nevent*100.0 << "%)" << endl;
-	}
+	    // cout << ievent << "/" << nevent;
+	    // cout << "(" << (double)ievent/nevent*100.0 << "%)" << endl;
+        // cout << '\r' << setw(10) << ievent << "/" << setw(10) << nevent
+        //     << "(" << setw(10) << (double)ievent/nevent*100.0 << "%)";
+        cout << "\r" << " " << setw(10) << right << ievent << "/"
+            << setw(10) << right << nevent
+            << "(" << setw(5) << fixed << setprecision(2)
+            << (double)ievent/nevent*100.0 << "%)" << flush;
+        cout << fixed << setprecision(0);
+    }
 
 	bool event_has_evs_count = true;
 	bool event_is_discarded  = false;
-	
-	for ( int imodule=0; imodule<nmodules; ++imodule ) {	    
-	    
-	    auto module = module_stacker->get(imodule);	    
+
+	for ( int imodule=0; imodule<nmodules; ++imodule ) {
+
+	    auto module = module_stacker->get(imodule);
 	    status = module->mod_ana();
 
 	    auto status_count = module_stacker->status_count(imodule);
 	    status_count->entry++;
-	    
+
 	    // if ( status == ANL_OK ) continue;
-	    if( status == ANL_QUIT ) 
-		status = ANL_ENDLOOP + ANL_DISCARD + ANL_NOCOUNT;	    
+	    if( status == ANL_QUIT )
+		status = ANL_ENDLOOP + ANL_DISCARD + ANL_NOCOUNT;
 	    else if ( status == ANL_SKIP )
 		status = ANL_DISCARD;
 	    else if ( status == ANL_LOOP )
@@ -156,7 +179,7 @@ int anl::ANLmanager::read_data(long int nevent, long int print_freq)
 
 	    if ( status & ANL_NEWROOT )
 		run_broke = true;
-	    
+
 	    if ( status & ANL_DISCARD ) {
 		if( status & ANL_ENDLOOP ) {
 		    run_has_quit = true; status_count->quit++;
@@ -164,60 +187,63 @@ int anl::ANLmanager::read_data(long int nevent, long int print_freq)
 		else status_count->skip++;
 		event_is_discarded = true; break;
 	    }
-	    
+
 	    // if ( status & ANL_NEWROOT ) {
 	    // 	loop_return[nest_level] = imodule; nest_level++;
 	    // }
 
 	    status_count->next++;
-	    
+
 	} /* for imodule */
 
-	if ( event_has_evs_count ) evs::accumulate();	
+	if ( event_has_evs_count ) evs::accumulate();
 
 	// if ( nest_level > 0 ) {
 	//     nest_level--; imodule = loop_return[nest_level];
 	//     get_count(imodule)->loop_entry++;
-	// }	    	
+	// }
 	// if ( is_discarded ) irecv++;
-		
-    } /* while ievent */
 
+    } /* while ievent */
+    cout << endl;
+    cout << endl;
     if ( run_has_quit == false ) run_status->quit++;
     if ( this->call_endrun() != ANL_OK ) return ANL_NG;
-    
+    cout << endl;
+    cout << " --- All mod_endrun is OK" << endl;
+
     this->show_status();
-    
-    return ANL_OK;    
+
+    return ANL_OK;
 }
 int anl::ANLmanager::show_status()
-{   
+{
     cout << endl;
     cout << "      ***************************" << endl;
     cout << "      ***** Analysis chain ******" << endl;
     cout << "      ***************************" << endl;
     cout << endl;
-    
+
     int nmodules = module_stacker->get_nmodules();
     if ( nmodules == 0 ) return ANL_OK;
-    
+
     auto first_count = module_stacker->status_count(0);
-    
+
     cout << "               PUT: " << first_count->entry << endl;
-    
-    if( first_count->quit > 0 ) 
-	cout << "QUIT:           |" << first_count->quit << endl;    
+
+    if( first_count->quit > 0 )
+	cout << "QUIT:           |" << first_count->quit << endl;
     else
 	cout << "                |" << endl;
-    
-    
+
+
     for(int imodule=0; imodule<nmodules; imodule++){
-	
+
 	auto status_count = module_stacker->status_count( imodule );
 	if ( !status_count ) continue;
-	
+
 	auto module  = module_stacker->get( imodule );
-	
+
         if( status_count->quit > 0 )
 	    cout << "<--- ";
         else
@@ -240,9 +266,9 @@ int anl::ANLmanager::show_status()
 	} else {
 	    cout << "QUIT: " << next_module_status->quit;
 	    cout << "         | OK: " << status_count->next;
-	    cout << "/" << status_count->entry;	    
+	    cout << "/" << status_count->entry;
 	}
-	
+
         if( status_count->skip > 0 ) {
 	    cout << "                      -------> SKIP: ";
 	    cout << status_count->skip << endl;
@@ -252,10 +278,10 @@ int anl::ANLmanager::show_status()
 
     auto final_count = module_stacker->status_count( nmodules-1 );
     cout << "               GET: " << final_count->next << endl;
-    
+
     cout << endl;
     evs::output();
-    
+
     cout << endl;
     bnk::list();
 
@@ -276,18 +302,18 @@ int anl::ANLmanager::call_init_and_his()
 {
     auto status = ANL_OK;
     auto nmodules = module_stacker->get_nmodules();
-    
+
     for ( int imodule=0; imodule<nmodules; ++imodule ) {
-	
+
 	auto module = module_stacker->get( imodule );
 	if ( !module ) continue;
-	
+
 	cout << flush; status = module->mod_init(); cout << flush;
-	if ( status != ANL_OK ) return status; 
-	
+	if ( status != ANL_OK ) return status;
+
 	cout << flush; status = module->mod_his(); cout << flush;
 	if ( status != ANL_OK ) return status;
-	
+
     }
     return status;
 }
@@ -295,12 +321,12 @@ int anl::ANLmanager::call_bgnrun()
 {
     auto status = ANL_OK;
     auto nmodules = module_stacker->get_nmodules();
-    
+
     for ( int imodule=0; imodule<nmodules; ++imodule ) {
 
 	auto module = module_stacker->get( imodule );
 	if ( !module ) continue;
-	
+
 	cout << flush; status = module->mod_bgnrun(); cout << flush;
     }
     return status;
@@ -309,12 +335,12 @@ int anl::ANLmanager::call_endrun()
 {
     auto status = ANL_OK;
     auto nmodules = module_stacker->get_nmodules();
-    
+
     for ( int imodule=0; imodule<nmodules; ++imodule ) {
 
 	auto module = module_stacker->get( imodule );
 	if ( !module ) continue;
-	
+
 	cout << flush; status = module->mod_endrun(); cout << flush;
     }
     return status;
@@ -323,18 +349,18 @@ int anl::ANLmanager::exit_process()
 {
     auto status = ANL_OK;
     auto nmodules = module_stacker->get_nmodules();
-    
+
     for ( int imodule=0; imodule<nmodules; ++imodule ) {
 
 	auto module = module_stacker->get( imodule );
 	if ( !module ) continue;
-	
+
 	cout << flush; status = module->mod_exit(); cout << flush;
     }
-    
+
     bnk::end();
     // evs::end();
-    
+
     return status;
 }
 
@@ -352,6 +378,6 @@ int anl::ANLmanager::message(int level, std::string place, std::string message)
         cerr << "ANL-ERROR in ";
 	cerr << place << " : " << message << endl;
 	return ANL_NG;
-    }    
+    }
     return ANL_OK;
 }

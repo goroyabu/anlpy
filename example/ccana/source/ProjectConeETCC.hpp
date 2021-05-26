@@ -12,6 +12,7 @@
 
 #include <TFile.h>
 #include <TTree.h>
+#include <TH2D.h>
 #include <TH3F.h>
 #include <TMath.h>
 #include <TVector3.h>
@@ -40,6 +41,10 @@ class ComptreeEvent
         std::vector<double> cdte_detz;
         double epi_total;
 
+        double eigen_ratio;
+        double sum_pixel_value_around_init;
+        double sum_pixel_value_around_end;
+
         bool reconstructed;
         double init_pos_cmos_detx;
         double init_pos_cmos_dety;
@@ -50,7 +55,8 @@ class ComptreeEvent
             : tree(nullptr)
             {}
 
-        inline bool ExistBranch(TTree* tree, TString key){
+        inline bool ExistBranch(TTree* tree, TString key)
+        {
             if ( !tree->FindBranch(key) ) {
                 std::cout << "TBranch " << key;
                 std::cout << " is not found." << std::endl;
@@ -58,14 +64,20 @@ class ComptreeEvent
             }
             return true;
         }
-        inline bool ExistBranch(TString key) {
+        inline bool ExistBranch(TString key)
+        {
             return ExistBranch( this->tree, key);
         }
-        inline bool Next(){
+        inline bool Next()
+        {
             ++current_entry;
             if ( current_entry>=nentries ) return false;
             tree->GetEntry(current_entry);
             return true;
+        }
+        inline long long int GetEntries() const
+        {
+            return this->nentries;
         }
         int SetBranchAddress(TTree* tree);
 
@@ -88,11 +100,22 @@ class ProjectConeETCC : public anl::VANL_Module
         TFile * output_file;
         TTree * output_tree;
         TH3F * image;
+        TH3F * image_etcc;
         TH1D * h1_cone_filling_ratio;
+        TH1D * h1_arm_distribution;
+        TH1D * h1_spd_distribution;
+        TH2D * h2_arm_vs_spd;
+        TH2D * h2_arm_distribition;
+        TH2D * h2_spd_distribition;
+        TH2D * h2_ene_cmos_vs_cdte;
+        TH1D * h1_ene_sum_cmos_cdte;
+
         ComptreeEvent event;
 
         /** parameters */
         double cone_thick_rad;
+        double arc_length_rad;
+        double arc_length_sigma;
         double tangent_cone_thick;
         double distance_index_omega;
         double e_threshold_si;
@@ -105,6 +128,10 @@ class ProjectConeETCC : public anl::VANL_Module
         double rotation_around_vertical_rad;
         bool enable_reject_fluor;
         bool enable_normalize_cone;
+        double eigen_ratio_threshold;
+        double pixel_ratio_threshold;
+
+        TVector3 source_position;
 
         /* branch */
         /* inherited from eventtree */
@@ -141,7 +168,6 @@ class ProjectConeETCC : public anl::VANL_Module
         TF1 * si_ee_up;
 
     private :
-        int DefineBranch(TTree* tree);
 
         struct Hit
         {
@@ -149,13 +175,15 @@ class ProjectConeETCC : public anl::VANL_Module
 
                 double x, y, z;
                 double energy;
+                double phi;
 
             public :
-                Hit(double x, double y, double z, double energy)
-                    : x(x), y(y), z(z), energy(energy)
+                Hit(double x, double y, double z, double energy, double phi)
+                    : x(x), y(y), z(z), energy(energy), phi(phi)
                 {}
                 Hit(const Hit& other)
-                    : x(other.x), y(other.y), z(other.z), energy(other.energy)
+                    : x(other.x), y(other.y), z(other.z),
+                    energy(other.energy), phi(other.phi)
                 {}
                 Hit& operator=(const Hit& other)
                 {
@@ -163,6 +191,7 @@ class ProjectConeETCC : public anl::VANL_Module
                     y = other.y;
                     z = other.z;
                     energy = other.energy;
+                    phi = other.phi;
                     return *this;
                 }
                 TVector3 Postion() const
@@ -173,30 +202,74 @@ class ProjectConeETCC : public anl::VANL_Module
                 {
                     return energy;
                 }
+                double Phi() const
+                {
+                    return phi;
+                }
         };
-        inline double ComptonTheta(double scat, double abso)
+
+    private:
+
+        int DefineBranch(TTree* tree);
+        bool Projection(const Hit& si, const Hit& cdte);
+        TH1D* GetFillingRatio
+        (TH3F* image, const TVector3& scat, const TVector3& abso, double angle_theta_rad);
+        double ScaleByFillingRatio(TH3F* th3, TH1D* ratio);
+
+        inline static double ComptonTheta(double scat, double abso)
         {
             static const double mass_of_electron = 511.0;
             auto costheta = 1 - mass_of_electron * ( 1/abso - 1/(scat+abso) );
             if ( costheta<-1.0 || 1.0<costheta ) return -1;
             return std::fabs( TMath::ACos(costheta) );
         }
-        inline bool IsInEnergyWindow(const double total_energy)
+        inline bool IsInEnergyWindow(const double total_energy) const
         {
-            if ( e_window_begin<=total_energy && total_energy<=e_window_end )
+            if ( this->e_window_begin<=total_energy && total_energy<=this->e_window_end )
                 return true;
             return false;
         }
-        inline bool IsInThetaRange(const Hit& scat, const Hit& abso)
+        inline bool IsInThetaRange(const Hit& scat, const Hit& abso) const
         {
             auto theta = ComptonTheta( scat.Energy(), abso.Energy() );
-            if ( 0<theta && theta<=theta_max_degree )
+            if ( 0<theta && theta<=this->theta_max_degree )
                 return true;
             return false;
         }
-        static inline bool IsFluor(double energy)
+        inline static bool IsFluor(double energy)
         {
             return 21.0<energy && energy<=28.0;
+        }
+        inline static TVector3 VoxelCenter(TH3* h, int bin)
+        {
+            int xbin, ybin, zbin;
+            h->GetBinXYZ( bin, xbin, ybin, zbin );
+            auto x = h->GetXaxis()->GetBinCenter(xbin);
+            auto y = h->GetYaxis()->GetBinCenter(ybin);
+            auto z = h->GetZaxis()->GetBinCenter(zbin);
+            return TVector3(x, y, z);
+        }
+        inline static double GetBinContent(TH1D* h, double x)
+        {
+            auto bin = h->GetXaxis()->FindBin(x);
+            if ( 1 <= bin && bin <= h->GetXaxis()->GetNbins() )
+            return h->GetBinContent(bin);
+            return 0.0;
+        }
+        inline static bool IsVectorInside( TH3F* image, const TVector3& vec)
+        {
+            auto x = image->GetXaxis()->GetXmin() <= vec.X() &&
+                vec.X() <= image->GetXaxis()->GetXmax();
+            if ( x == false ) return false;
+
+            auto y = image->GetYaxis()->GetXmin() <= vec.Y() &&
+                vec.Y() <= image->GetYaxis()->GetXmax();
+            if ( y == false ) return false;
+
+            auto z = image->GetZaxis()->GetXmin() <= vec.Z() &&
+                vec.Z() <= image->GetZaxis()->GetXmax();
+
+            return z;
         }
 };
 

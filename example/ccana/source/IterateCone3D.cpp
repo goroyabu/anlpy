@@ -28,6 +28,7 @@ IterateCone3D::IterateCone3D()
     // define_parameter<std::string>("input_file", "input.txt");
     define_parameter<std::string>("input_file", "input.root");
     define_parameter<std::string>("input_tree", "resptree");
+    define_parameter<std::string>("input_branch", "response");
     define_parameter<std::string>("output_file", "output.root");
     define_parameter<int>("n_of_iterations", 0);
     define_parameter<double>("denominator_offset", 10.0);
@@ -52,8 +53,12 @@ IterateCone3D::~IterateCone3D()
 
 int IterateCone3D::mod_bgnrun()
 {
+    cout << " --- IterateCone3D::mod_bgnrun" << endl;
+    cout << endl;
+
     auto input_file_name = get_parameter<std::string>("input_file");
     auto input_tree_name = get_parameter<std::string>("input_tree");
+    auto input_branch_name = get_parameter<std::string>("input_branch");
 
     auto chain = new TChain( input_tree_name.c_str() );
     chain->Add( input_file_name.c_str() );
@@ -67,15 +72,14 @@ int IterateCone3D::mod_bgnrun()
     TIter next(list_of_files);
     TChainElement * elem = 0;
     while ( (elem = (TChainElement*)next() ) ) {
-	cout << "File" << ifile << " : " << elem->GetTitle() << endl;
+	cout << " - Input file " << ifile << " : " << elem->GetTitle() << endl;
     }
 
-    auto nentries = event.set_branch_address( chain );
+    auto nentries = event.set_branch_address( chain, input_branch_name.c_str() );
     if ( nentries==0 ) {
 	cout << input_tree_name << " has NO event." << endl;
 	return anl::ANL_NG;
     }
-    cout << "# of entries in " << input_tree_name << " is " << nentries << endl;
 
     auto ofname = get_parameter<std::string>("output_file");
     output_file = new TFile( ofname.c_str(), "recreate" );
@@ -83,7 +87,9 @@ int IterateCone3D::mod_bgnrun()
         cout << "Creating " << ofname << " is failed." << endl;
         return anl::ANL_NG;
     }
-    cout << ofname << " is created." << endl;
+    cout << " - Output file  : " << ofname << " is created." << endl;
+
+    cout << " - # of entries in " << input_tree_name << " is " << nentries << endl;
 
     sbp_image = (TH3F*)event.response->Clone();
     sbp_image->Reset();
@@ -94,6 +100,7 @@ int IterateCone3D::mod_bgnrun()
     nbins_zaxis = sbp_image->GetZaxis()->GetNbins();
 
     n_of_iterations = get_parameter<int>("n_of_iterations");
+    evs::put("ANL_totalevents", this->n_of_iterations+1);
 
     denominator_offset = get_parameter<double>("denominator_offset");
     is_enabled_use_sbp_as_efficiency = get_parameter<int>("use_sbp_as_efficiency");
@@ -114,7 +121,7 @@ int IterateCone3D::mod_bgnrun()
     is_enabled_multiple_thread = false;
     if ( n_threads>1 ) {
 	is_enabled_multiple_thread = true;
-	cout << "Multiple Thread Mode is enabled (N=" << n_threads << ")" << endl;
+	cout << " - Multiple Thread Mode is enabled (N=" << n_threads << ")" << endl;
     }
 
     is_enabled_use_visibility
@@ -160,81 +167,144 @@ int IterateCone3D::mod_bgnrun()
     g_loglikelihood_2nd->SetNameTitle(
         "g_loglikelihood_2nd", "loglikelihood 2nd term" );
 
+    this->current_iteration = -1;
+
+    cout << endl;
+    cout << " ---" << endl;
+
     return anl::ANL_OK;
 }
 
 int IterateCone3D::mod_ana()
 {
+    this->current_iteration += 1;
+    if ( n_of_iterations < this->current_iteration )
+        return anl::ANL_LOOP;
 
     if ( n_of_iterations == 0 ) {
+        auto x = event.response->GetXaxis()->GetNbins();
+        auto y = event.response->GetYaxis()->GetNbins();
+        auto z = event.response->GetZaxis()->GetNbins();
 
-	auto x = event.response->GetXaxis()->GetNbins();
-	auto y = event.response->GetYaxis()->GetNbins();
-	auto z = event.response->GetZaxis()->GetNbins();
+        vector3 new_elems = make_vector3( x, y, z, 0.0 );
 
-	vector3 new_elems = make_vector3( x, y, z, 0.0 );
-
-	while ( event.next() ) {
-	    ++current_entry;
-	    if ( eventid>=0 && eventid>current_entry ) continue;
-	    if ( eventid>=0 && eventid<current_entry ) return anl::ANL_LOOP;
-	    // sbp_image->Add( event.response );
-	    h2v_add_elements( event.response, &new_elems );
-	}
-
-	v2h_set_elements( new_elems, sbp_image );
-
-	return anl::ANL_LOOP;
-    }
-    else {
-
-	auto x = event.response->GetXaxis()->GetNbins();
-	auto y = event.response->GetYaxis()->GetNbins();
-	auto z = event.response->GetZaxis()->GetNbins();
-
-	vector3 sbp_elems = make_vector3( x, y, z, 0.0 );
-	vector3 temp_elems = make_vector3( x, y, z, 0.0 );
-
-	while ( event.next() ) {
-
-	    h2v_get_elements( event.response, &temp_elems );
-
-	    v2v_add_elements( temp_elems, &sbp_elems );
-
-	    auto integral = get_integral( temp_elems );
-
-	    vector_integral_of_response.emplace_back( integral );
-        this->h1_integral_event_response->Fill( integral );
-	}
-
-	v2h_set_elements( sbp_elems, sbp_image );
-	sbp_elems.clear();
-	sbp_elems.shrink_to_fit();
-	temp_elems.clear();
-	temp_elems.shrink_to_fit();
+        while ( event.next() ) {
+            ++current_entry;
+            if ( eventid>=0 && eventid>current_entry ) continue;
+            if ( eventid>=0 && eventid<current_entry ) return anl::ANL_LOOP;
+            // sbp_image->Add( event.response );
+            h2v_add_elements( event.response, &new_elems );
+        }
+        v2h_set_elements( new_elems, sbp_image );
+        return anl::ANL_LOOP;
     }
 
-    cout << "first backprojection is done" << endl;
+    this->mlem_image.reserve( n_of_iterations );
 
-    mlem_image.reserve( n_of_iterations );
+    if ( this->current_iteration == 0 ) {
 
-    auto new_image = next_image( sbp_image );
-    mlem_image.emplace_back( new_image );
+        auto x = event.response->GetXaxis()->GetNbins();
+        auto y = event.response->GetYaxis()->GetNbins();
+        auto z = event.response->GetZaxis()->GetNbins();
 
-    if ( n_of_iterations>1 )
-	cout << "1/" << n_of_iterations << "iteration is done" << endl;
+        vector3 sbp_elems = make_vector3( x, y, z, 0.0 );
+        vector3 temp_elems = make_vector3( x, y, z, 0.0 );
 
-    for ( int iteration=1; iteration<n_of_iterations; ++iteration ) {
+        while ( event.next() ) {
+            h2v_get_elements( event.response, &temp_elems );
+            v2v_add_elements( temp_elems, &sbp_elems );
 
-	auto new_image = next_image( mlem_image[ iteration-1 ] );
-	mlem_image.emplace_back( new_image );
-	// std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+            auto integral = get_integral( temp_elems );
+            vector_integral_of_response.emplace_back( integral );
+            this->h1_integral_event_response->Fill( integral );
+        }
 
-	cout << iteration+1 << "/" << n_of_iterations;
-	cout << " iteration is done" << endl;
+        v2h_set_elements( sbp_elems, sbp_image );
+        sbp_elems.clear();
+        sbp_elems.shrink_to_fit();
+        temp_elems.clear();
+        temp_elems.shrink_to_fit();
+
+    } else if ( this->current_iteration == 1 ){
+
+        auto new_image = next_image( this->sbp_image );
+        this->mlem_image.emplace_back( new_image );
+
+    } else {
+        // for ( int iteration=1; iteration<this->n_of_iterations; ++iteration ) {
+        auto new_image = next_image( this->mlem_image[ current_iteration-2 ] );
+        this->mlem_image.emplace_back( new_image );
+        // }
     }
 
-    return anl::ANL_LOOP;
+    return anl::ANL_OK;
+    // if ( n_of_iterations == 0 ) {
+    //
+    //     auto x = event.response->GetXaxis()->GetNbins();
+    //     auto y = event.response->GetYaxis()->GetNbins();
+    //     auto z = event.response->GetZaxis()->GetNbins();
+    //
+    //     vector3 new_elems = make_vector3( x, y, z, 0.0 );
+    //
+    //     while ( event.next() ) {
+    //         ++current_entry;
+    //         if ( eventid>=0 && eventid>current_entry ) continue;
+    //         if ( eventid>=0 && eventid<current_entry ) return anl::ANL_LOOP;
+    //         // sbp_image->Add( event.response );
+    //         h2v_add_elements( event.response, &new_elems );
+    //     }
+    //
+    //     v2h_set_elements( new_elems, sbp_image );
+    //
+    //     return anl::ANL_LOOP;
+    //
+    // } else {
+    //
+    //     auto x = event.response->GetXaxis()->GetNbins();
+    //     auto y = event.response->GetYaxis()->GetNbins();
+    //     auto z = event.response->GetZaxis()->GetNbins();
+    //
+    //     vector3 sbp_elems = make_vector3( x, y, z, 0.0 );
+    //     vector3 temp_elems = make_vector3( x, y, z, 0.0 );
+    //
+    //     while ( event.next() ) {
+    //
+    //         h2v_get_elements( event.response, &temp_elems );
+    //         v2v_add_elements( temp_elems, &sbp_elems );
+    //
+    //         auto integral = get_integral( temp_elems );
+    //         vector_integral_of_response.emplace_back( integral );
+    //         this->h1_integral_event_response->Fill( integral );
+    //     }
+    //
+    //     v2h_set_elements( sbp_elems, sbp_image );
+    //     sbp_elems.clear();
+    //     sbp_elems.shrink_to_fit();
+    //     temp_elems.clear();
+    //     temp_elems.shrink_to_fit();
+    // }
+    //
+    // // cout << "first backprojection is done" << endl;
+    //
+    // mlem_image.reserve( n_of_iterations );
+    //
+    // auto new_image = next_image( sbp_image );
+    // mlem_image.emplace_back( new_image );
+    //
+    // // if ( n_of_iterations>1 )
+    // //     cout << "1/" << n_of_iterations << "iteration is done" << endl;
+    //
+    // for ( int iteration=1; iteration<n_of_iterations; ++iteration ) {
+    //
+    //     auto new_image = next_image( mlem_image[ iteration-1 ] );
+    //     mlem_image.emplace_back( new_image );
+    //     // std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+    //
+    //     // cout << iteration+1 << "/" << n_of_iterations;
+    //     // cout << " iteration is done" << endl;
+    // }
+
+    // return anl::ANL_LOOP;
 }
 
 int IterateCone3D::mod_endrun()
@@ -665,10 +735,10 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
         //     ( vector_integral_of_response[ current_entry ]/( integral + denominator_offset ),
         //       &temp2_elems );
 
-        if ( integral_of_current_response==0.0 )
-            std::cout << current_entry << " 0" << std::endl;
-        if ( integral==0.0 )
-            std::cout << current_entry << " 0" << std::endl;
+        // if ( integral_of_current_response==0.0 )
+        //     std::cout << current_entry << " 0" << std::endl;
+        // if ( integral==0.0 )
+        //     std::cout << current_entry << " 0" << std::endl;
 
         if ( integral==0.0 || integral_of_current_response==0.0 )
             continue;
@@ -690,7 +760,7 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
         // 	      ( integral + denominator_offset ) );
         // new_image->Add( tempo );
     }
-    cout << "Integration over all events is done." << endl;
+    // cout << "Integration over all events is done." << endl;
 
     auto diff_new_and_previous = (TH3F*)previous_image->Clone();
     diff_new_and_previous->SetName( Form( "diff_image_prev_and_iter%03d", iteration) );
@@ -699,7 +769,7 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
     diff_image.emplace_back( diff_new_and_previous );
 
     v2v_multiply_elements( prev_elems, &new_elems );
-    cout << "Multiplying by previous image is done." << endl;
+    // cout << "Multiplying by previous image is done." << endl;
 
     vector3 sbp_elems;
 	h2v_get_elements( sbp_image, &sbp_elems );
@@ -707,7 +777,7 @@ TH3F* IterateCone3D::next_image(TH3F* previous_image)
 	// vector3 sbp_elems;
 	// h2v_get_elements( sbp_image, &sbp_elems );
 	v2v_divide_elements( sbp_elems, &new_elems );
-	cout << "Dividing by simple back-projection is done" << endl;
+	// cout << "Dividing by simple back-projection is done" << endl;
     }
 
     v2v_multiply_elements( prev_elems, &sbp_elems );
