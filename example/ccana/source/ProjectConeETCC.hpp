@@ -41,6 +41,12 @@ class ComptreeEvent
         std::vector<double> cdte_detz;
         double epi_total;
 
+        int n_pixel;
+        std::vector<double> epi_pixel_value;
+        std::vector<double> cmos_detx;
+        std::vector<double> cmos_dety;
+        double min_cmos_detx;
+        double min_cmos_dety;
         double eigen_ratio;
         double sum_pixel_value_around_init;
         double sum_pixel_value_around_end;
@@ -162,10 +168,24 @@ class ProjectConeETCC : public anl::VANL_Module
         float hit3_posz;
         float totalenergy;
 
+        float theta_kine;
+        float theta_geom;
+        float theta_elec;
+        float phi_esti;
+        float phi_geom;
+
+        float angle_inci;
+        float de_over_dx;
+        float prod_inci_phi;
+        float sum_epi_around_init;
+        float sum_epi_forward_init;
+
         /* for CMOS energy correction */
         TH1D * param2_cdtez;
         TF1 * si_ee_lo;
         TF1 * si_ee_up;
+
+        TH2D * etrack_calc_dedx;
 
     private :
 
@@ -211,6 +231,7 @@ class ProjectConeETCC : public anl::VANL_Module
     private:
 
         int DefineBranch(TTree* tree);
+        void CalcComptonEvent(const Hit& si, const Hit& cdte);
         bool Projection(const Hit& si, const Hit& cdte);
         TH1D* GetFillingRatio
         (TH3F* image, const TVector3& scat, const TVector3& abso, double angle_theta_rad);

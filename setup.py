@@ -62,7 +62,7 @@ setup(
     name='anlpy',
     version='20200729',
     author='Goro Yabu',
-    author_email='goto.yabu@gmail.com',
+    author_email='goro.yabu@ipmu.com',
     description='Analysis Framework using python',
     long_description='',
     ext_modules=[CMakeExtension('anlpy')],

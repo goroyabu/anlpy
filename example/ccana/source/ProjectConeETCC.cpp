@@ -121,7 +121,9 @@ int ProjectConeETCC::mod_bgnrun()
     }
 
     auto otname = get_parameter<std::string>("output_tree");
-    this->output_tree = new TTree( otname.c_str(), otname.c_str() );
+    // this->output_tree = new TTree( otname.c_str(), otname.c_str() );
+    this->output_tree = this->input_tree->CloneTree(0);
+    this->output_tree->SetNameTitle( otname.c_str(), otname.c_str() );
 
     auto copyid = get_parameter<std::string>("copyid");
     this->is_event_list_only = get_parameter<int>("event_list_only");
@@ -156,6 +158,8 @@ int ProjectConeETCC::mod_bgnrun()
             (TString)"cone_filling_ratio_"+copyid.c_str(),
             "cone_filling_ratio;Z(mm)", z_nbins, z_min, z_max );
     }
+    this->etrack_calc_dedx = new TH2D( "etrack_calc_dedx", "etrack",
+        110, -0.02*10-0.01, 0.02*100-0.01, 110, -0.02*10-0.01, 0.02*100-0.01);
 
     auto source_posx = this->get_parameter<double>("source_posx");
     auto source_posy = this->get_parameter<double>("source_posy");
@@ -276,6 +280,15 @@ int ProjectConeETCC::mod_bgnrun()
     this->hit3_posy = 0.0;
     this->hit3_posz = 0.0;
 
+    this->theta_kine = 0.0;
+    this->theta_geom = 0.0;
+    this->theta_elec = 0.0;
+    this->phi_esti = 0.0;
+    this->phi_geom = 0.0;
+    
+    this->de_over_dx = 0.0;
+    this->angle_inci = 0.0;
+
     cout << endl;
     cout << endl;
     return anl::ANL_OK;
@@ -362,6 +375,52 @@ int ProjectConeETCC::mod_ana()
     this->hit2_posz = cdte.Postion().Z();
     this->totalenergy = si.Energy() + cdte.Energy();
 
+    // this->etrack_calc_dedx->Reset();
+    // for ( auto i_pixel=0; i_pixel<this->event.n_pixel; ++i_pixel ) {
+    //     // auto s = this->event.cmos_detx[i_pixel] - this->event.min_cmos_detx;
+    //     this->etrack_calc_dedx->Fill(
+    //         this->event.cmos_detx[i_pixel] - this->event.min_cmos_detx,
+    //         this->event.cmos_dety[i_pixel] - this->event.min_cmos_dety,
+    //         this->event.epi_pixel_value[i_pixel]
+    //     );
+    // }
+    // double init_x = this->event.init_pos_cmos_detx - this->event.min_cmos_detx;
+    // double init_y = this->event.init_pos_cmos_dety - this->event.min_cmos_dety;
+    // double init_z = this->event.init_pos_cmos_detz;
+    // double cos_phi = TMath::Cos(this->event.phi_cmos_det);
+    // double sin_phi = TMath::Sin(this->event.phi_cmos_det);
+    // double end_x = init_x + cos_phi * 0.1;
+    // double end_y = init_y + sin_phi * 0.1;
+
+    // const static auto ndiv_deltax = (int)(20);
+    // const static auto deltax      = (double)(0.02 * 5);
+    // const static auto div_deltax  = (double)(deltax / ndiv_deltax);
+    // auto deltae = 0.0;
+    // auto n_intrack = 0;
+    // for ( auto i=0; i<ndiv_deltax+1; ++i ) {
+    //     auto x = init_x + cos_phi * div_deltax * i;
+    //     auto y = init_y + sin_phi * div_deltax * i;
+    //     auto xbin = this->etrack_calc_dedx->GetXaxis()->FindBin(x);
+    //     auto ybin = this->etrack_calc_dedx->GetYaxis()->FindBin(y);
+    //     auto c = this->etrack_calc_dedx->GetBinContent( xbin, ybin );
+    //     if ( c==0 ) break;
+    //     ++n_intrack;
+    //     deltae += c;
+    // }
+    // deltae /= (double)(n_intrack);
+    // this->de_over_dx = deltae / deltax;
+    // // this->etrack_calc_dedx->SetTitle(
+    // //     Form("x=%4.2f,y=%4.2f,endx=%4.2f,endy=%4.2f,dedx=%4.2f",
+    // //         init_x,init_y,end_x,end_y,de_over_dx)
+    // // );
+
+    // auto angle_theta_rad = this->ComptonTheta( si.Energy(), cdte.Energy() );
+    // auto angle_phi_rad = TVector2::Phi_mpi_pi( si.Phi() + TMath::Pi()*0.5 );
+    // this->theta_kine = angle_theta_rad;
+    // this->phi_esti = angle_phi_rad;
+
+    this->CalcComptonEvent( si, cdte );
+
     if ( is_event_list_only ) {
         this->output_tree->Fill();
         return anl::ANL_OK;
@@ -398,11 +457,11 @@ int ProjectConeETCC::mod_endrun()
 
 int ProjectConeETCC::DefineBranch(TTree* tree)
 {
-    tree->Branch( "ti", &ti, "ti/i" );
-    tree->Branch( "livetime", &livetime, "livetime/i" );
-    tree->Branch( "unixtime", &unixtime, "unixtime/i" );
-    tree->Branch( "ext1pps", &ext1pps, "ext1pps/i" );
-    tree->Branch( "msec_counter", &msec_counter, "msec_counter/i" );
+    // tree->Branch( "ti", &ti, "ti/i" );
+    // tree->Branch( "livetime", &livetime, "livetime/i" );
+    // tree->Branch( "unixtime", &unixtime, "unixtime/i" );
+    // tree->Branch( "ext1pps", &ext1pps, "ext1pps/i" );
+    // tree->Branch( "msec_counter", &msec_counter, "msec_counter/i" );
 
     tree->Branch( "num_hits", &num_hits, "num_hits/I" );
     tree->Branch( "externalCLK", &externalCLK, "externalCLK/i" );
@@ -424,6 +483,20 @@ int ProjectConeETCC::DefineBranch(TTree* tree)
     tree->Branch( "hit3_posz", &hit3_posz, "hit3_posz/F" );
     tree->Branch( "totalenergy", &totalenergy, "totalenergy/F" );
 
+    tree->Branch( "theta_kine", &theta_kine, "theta_kine/F" );
+    tree->Branch( "theta_geom", &theta_geom, "theta_geom/F" );
+    // tree->Branch( "theta_elec", &theta_elec, "theta_elec/F" );
+    tree->Branch( "phi_esti", &phi_esti, "phi_esti/F" );
+    tree->Branch( "phi_geom", &phi_geom, "phi_geom/F" );
+    tree->Branch( "de_over_dx", &de_over_dx, "de_over_dx/F" );
+    // tree->Branch( "etrack", "TH2D", &this->etrack_calc_dedx );
+    tree->Branch( "angle_inci", &angle_inci, "angle_inci/F" );
+    tree->Branch( "prod_inci_phi", &prod_inci_phi, "prod_inci/F" );
+    tree->Branch( "sum_epi_around_init", 
+        &sum_epi_around_init, "sum_epi_around_init/F");
+    tree->Branch( "sum_epi_forward_init", 
+        &sum_epi_forward_init, "sum_epi_forward_init/F");
+
     // if ( event.ExistBranch("coin_eventid") )
     //     output_tree->Branch( "coin_eventid", &event.coin_eventid, "coin_eventid/L" );
     //
@@ -443,11 +516,120 @@ int ProjectConeETCC::DefineBranch(TTree* tree)
 
     return anl::ANL_OK;
 }
+void ProjectConeETCC::CalcComptonEvent(const Hit& si, const Hit& cdte)
+{
+    this->etrack_calc_dedx->Reset();
+    for ( auto i_pixel=0; i_pixel<this->event.n_pixel; ++i_pixel ) {
+        // auto s = this->event.cmos_detx[i_pixel] - this->event.min_cmos_detx;
+        this->etrack_calc_dedx->Fill(
+            this->event.cmos_detx[i_pixel] - this->event.min_cmos_detx,
+            this->event.cmos_dety[i_pixel] - this->event.min_cmos_dety,
+            this->event.epi_pixel_value[i_pixel]
+        );
+    }
+    double init_x = this->event.init_pos_cmos_detx - this->event.min_cmos_detx;
+    double init_y = this->event.init_pos_cmos_dety - this->event.min_cmos_dety;
+    double init_z = this->event.init_pos_cmos_detz;
+    double cos_phi = TMath::Cos(this->event.phi_cmos_det);
+    double sin_phi = TMath::Sin(this->event.phi_cmos_det);
+    double end_x = init_x + cos_phi * 0.1;
+    double end_y = init_y + sin_phi * 0.1;
+    auto vec_phi_on_det_plane = TVector3( cos_phi, sin_phi, 0 );
+
+    auto init_xbin = this->etrack_calc_dedx->GetXaxis()->FindBin( init_x );
+    auto init_ybin = this->etrack_calc_dedx->GetYaxis()->FindBin( init_y );
+    
+    this->sum_epi_around_init = 0.0;
+    this->sum_epi_forward_init = 0.0;
+    for ( auto xbin=init_xbin-2; xbin<=init_xbin+2; ++xbin ) {
+        for ( auto ybin=init_ybin-2; ybin<=init_ybin+2; ++ybin ) {
+            auto gbin = this->etrack_calc_dedx->GetBin( xbin, ybin );
+            if ( this->etrack_calc_dedx->IsBinOverflow( gbin ) ) continue;
+            if ( this->etrack_calc_dedx->IsBinUnderflow( gbin ) ) continue;
+
+            auto cont = this->etrack_calc_dedx->GetBinContent( xbin, ybin );
+            this->sum_epi_around_init += cont;
+
+            if ( 0 <= cos_phi )
+                if ( xbin < init_xbin ) continue;
+            else 
+                if ( init_xbin < xbin ) continue;
+
+            if ( 0<= sin_phi )
+                if ( ybin < init_ybin ) continue;
+            else 
+                if ( init_ybin < ybin ) continue;
+
+            this->sum_epi_forward_init += cont;
+        }
+    }
+
+    const static auto ndiv_deltax = (int)(20);
+    const static auto deltax      = (double)(0.02 * 5);
+    const static auto div_deltax  = (double)(deltax / ndiv_deltax);
+    auto deltae = 0.0;
+    auto n_intrack = 0;
+    for ( auto i=0; i<ndiv_deltax+1; ++i ) {
+        auto x = init_x + cos_phi * div_deltax * i;
+        auto y = init_y + sin_phi * div_deltax * i;
+        auto xbin = this->etrack_calc_dedx->GetXaxis()->FindBin(x);
+        auto ybin = this->etrack_calc_dedx->GetYaxis()->FindBin(y);
+        auto c = this->etrack_calc_dedx->GetBinContent( xbin, ybin );
+        if ( c==0 ) break;
+        ++n_intrack;
+        deltae += c;
+    }
+    deltae /= (double)(n_intrack);
+    this->de_over_dx = deltae / deltax;
+    // this->etrack_calc_dedx->SetTitle(
+    //     Form("x=%4.2f,y=%4.2f,endx=%4.2f,endy=%4.2f,dedx=%4.2f",
+    //         init_x,init_y,end_x,end_y,de_over_dx)
+    // );
+
+    auto vec_norm_vertical = TVector3( 0, 1, 0 );
+    auto scat  = si.Postion();
+    auto abso  = cdte.Postion();
+    auto vec_cone_axis = scat - abso;
+    auto angle_theta_rad = this->ComptonTheta( si.Energy(), cdte.Energy() );
+    auto angle_phi_rad = TVector2::Phi_mpi_pi( si.Phi() + TMath::Pi()*0.5 );
+    this->theta_kine = angle_theta_rad;
+    this->phi_esti = angle_phi_rad;
+    
+    auto vec_norm_z = TVector3( 0, 0, -1 );
+    auto source_to_scat = scat - this->source_position;
+    auto vec_norm_inci = source_to_scat; vec_norm_inci.Unit();
+    auto scat_to_abso = abso - scat;
+    auto angle_theta_rad_geom = source_to_scat.Angle(scat_to_abso);
+    auto arm = (angle_theta_rad - angle_theta_rad_geom)/TMath::Pi()*180.0;
+    this->h1_arm_distribution->Fill( arm );
+    this->h2_arm_distribition->Fill(
+        angle_theta_rad/TMath::Pi()*180.0,
+        angle_theta_rad_geom/TMath::Pi()*180.0
+    );
+    this->theta_geom = angle_theta_rad_geom;
+    this->angle_inci = vec_norm_inci.Angle( vec_norm_z );
+
+    auto vec_axis_to_src_plane = vec_cone_axis.Unit();
+    vec_axis_to_src_plane *= this->source_position.Z() - scat.Z();
+    auto pos_axis_on_src_plane = scat + vec_axis_to_src_plane;
+    auto vec_phi_on_src_plane = this->source_position - pos_axis_on_src_plane;
+    auto angle_phi_rad_geom = TVector2::Phi_mpi_pi( vec_phi_on_src_plane.DeltaPhi( vec_norm_vertical ) );
+    auto spd = (angle_phi_rad - angle_phi_rad_geom)/TMath::Pi()*180;
+    this->h1_spd_distribution->Fill( spd );
+    this->h2_spd_distribition->Fill(
+        angle_phi_rad/TMath::Pi()*180.0,
+        angle_phi_rad_geom/TMath::Pi()*180.0
+    );
+    this->phi_geom = angle_phi_rad_geom;
+
+    this->prod_inci_phi = source_to_scat.Dot( vec_phi_on_det_plane );
+}
+
 bool ProjectConeETCC::Projection(const Hit& si, const Hit& cdte)
 {
-    image->Reset();
-    image_etcc->Reset();
-    auto nvoxels = image->GetNcells();
+    this->image->Reset();
+    this->image_etcc->Reset();
+    auto nvoxels = this->image->GetNcells();
     // cout << std::scientific << endl;
     // cout << "Phi=" << si.Phi() << endl;
     auto vec_norm_vertical = TVector3( 0, 1, 0 );
@@ -461,16 +643,19 @@ bool ProjectConeETCC::Projection(const Hit& si, const Hit& cdte)
     //     angle_phi_rad -= 2*TMath::Pi();
     // else if ( angle_phi_rad < -1*TMath::Pi() )
     //     angle_phi_rad += 2*TMath::Pi();
+    // this->theta_kine = angle_theta_rad;
+    // this->phi_esti = angle_phi_rad;
 
     auto source_to_scat = scat - this->source_position;
     auto scat_to_abso = abso - scat;
     auto angle_theta_rad_geom = source_to_scat.Angle(scat_to_abso);
     auto arm = (angle_theta_rad - angle_theta_rad_geom)/TMath::Pi()*180.0;
-    this->h1_arm_distribution->Fill( arm );
-    this->h2_arm_distribition->Fill(
-        angle_theta_rad/TMath::Pi()*180.0,
-        angle_theta_rad_geom/TMath::Pi()*180.0
-    );
+    // this->h1_arm_distribution->Fill( arm );
+    // this->h2_arm_distribition->Fill(
+    //     angle_theta_rad/TMath::Pi()*180.0,
+    //     angle_theta_rad_geom/TMath::Pi()*180.0
+    // );
+    // this->theta_geom = angle_theta_rad_geom;
 
     auto vec_axis_to_src_plane = vec_cone_axis.Unit();
     vec_axis_to_src_plane *= this->source_position.Z() - scat.Z();
@@ -478,11 +663,12 @@ bool ProjectConeETCC::Projection(const Hit& si, const Hit& cdte)
     auto vec_phi_on_src_plane = this->source_position - pos_axis_on_src_plane;
     auto angle_phi_rad_geom = TVector2::Phi_mpi_pi( vec_phi_on_src_plane.DeltaPhi( vec_norm_vertical ) );
     auto spd = (angle_phi_rad - angle_phi_rad_geom)/TMath::Pi()*180;
-    this->h1_spd_distribution->Fill( spd );
-    this->h2_spd_distribition->Fill(
-        angle_phi_rad/TMath::Pi()*180.0,
-        angle_phi_rad_geom/TMath::Pi()*180.0
-    );
+    // this->h1_spd_distribution->Fill( spd );
+    // this->h2_spd_distribition->Fill(
+    //     angle_phi_rad/TMath::Pi()*180.0,
+    //     angle_phi_rad_geom/TMath::Pi()*180.0
+    // );
+    // this->phi_geom = angle_phi_rad_geom;
 
     int n_of_filled_voxels = 0;
 
@@ -631,7 +817,7 @@ int ComptreeEvent::SetBranchAddress(TTree* tree)
     for ( auto branch : branch_list )
         if ( !this->ExistBranch(tree, branch) ) return anl::ANL_NG;
 
-    static const int alloc_size = 10;
+    static const int alloc_size = 100;
     this->merged_epi_si.resize(alloc_size);
     this->epi1.resize(alloc_size);
     this->epi2.resize(alloc_size);
@@ -639,6 +825,9 @@ int ComptreeEvent::SetBranchAddress(TTree* tree)
     this->cdte_detx.resize(alloc_size);
     this->cdte_dety.resize(alloc_size);
     this->cdte_detz.resize(alloc_size);
+    this->epi_pixel_value.resize(alloc_size);
+    this->cmos_detx.resize(alloc_size);
+    this->cmos_dety.resize(alloc_size);
 
     tree->SetBranchAddress( "merged_si_nhit", &(this->merged_si_nhit) );
     tree->SetBranchAddress( "merged_epi_si", this->merged_epi_si.data() );
@@ -650,6 +839,12 @@ int ComptreeEvent::SetBranchAddress(TTree* tree)
     tree->SetBranchAddress( "cdte_dety", this->cdte_dety.data() );
     tree->SetBranchAddress( "cdte_detz", this->cdte_detz.data() );
     tree->SetBranchAddress( "epi_total", &(this->epi_total) );
+    tree->SetBranchAddress( "n_pixel", &(this->n_pixel) );
+    tree->SetBranchAddress( "epi_pixel_value", this->epi_pixel_value.data() );
+    tree->SetBranchAddress( "cmos_detx", this->cmos_detx.data() );
+    tree->SetBranchAddress( "cmos_dety", this->cmos_dety.data() );
+    tree->SetBranchAddress( "min_cmos_detx", &(this->min_cmos_detx) );
+    tree->SetBranchAddress( "min_cmos_dety", &(this->min_cmos_dety) );
     tree->SetBranchAddress( "sum_pixel_value_around_init", &(this->sum_pixel_value_around_init) );
     tree->SetBranchAddress( "sum_pixel_value_around_end", &(this->sum_pixel_value_around_end) );
     tree->SetBranchAddress( "eigen_ratio", &(this->eigen_ratio) );
