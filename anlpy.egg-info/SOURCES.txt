@@ -1,8 +1,0 @@
-LICENSE
-README.md
-setup.py
-anlpy.egg-info/PKG-INFO
-anlpy.egg-info/SOURCES.txt
-anlpy.egg-info/dependency_links.txt
-anlpy.egg-info/not-zip-safe
-anlpy.egg-info/top_level.txt
