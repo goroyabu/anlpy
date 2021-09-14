@@ -60,7 +60,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='anlpy',
-    version='20200729',
+    version='20210724',
     author='Goro Yabu',
     author_email='goro.yabu@ipmu.com',
     description='Analysis Framework using python',
