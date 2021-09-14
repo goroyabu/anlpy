@@ -17,9 +17,10 @@ using std::endl;
 #include <TROOT.h>
 #include <TSeqCollection.h>
 #include <TCanvas.h>
+#include <TLeaf.h>
 
 ProjectCone3D::ProjectCone3D()
-    : anl::VANL_Module("ProjectCone3D", "0.1"),
+    : anl::VANL_Module("ProjectCone3D", "20210914"),
       input_file(nullptr), input_tree(nullptr),
       output_file(nullptr), output_tree(nullptr),
       image(nullptr)
@@ -76,16 +77,17 @@ int ProjectCone3D::mod_bgnrun()
 	cout << "Opening " << ifname << " is faild." << endl;
 	return anl::ANL_NG;
     }
-    cout << ifname << " is opened." << endl;
+    cout << "Open File : " << ifname << endl;
 
     auto itname = get_parameter<std::string>("input_tree");
     input_tree = (TTree*)input_file->Get( itname.c_str() );
     if ( !input_tree ) {
-	cout << itname << " is not found." << endl;
-	return anl::ANL_NG;
+        cout << itname << " is not found." << endl;
+        return anl::ANL_NG;
     }
 
-    event.set_branch_address(input_tree);	
+    evs::put("ANL_totalevents", input_tree->GetEntries());
+    event.set_branch_address(input_tree);
     
     auto ofname = get_parameter<std::string>("output_file");
 
@@ -97,18 +99,18 @@ int ProjectCone3D::mod_bgnrun()
     // else cout << "null" << endl;
     
     if ( !!opened && opened->ClassName()==(TString)"TFile"
-	 && ((TFile*)opened)->IsWritable() ) {
-	output_file = (TFile*)opened;
-	output_file->cd();
-	cout << ofname << " is already opened." << endl;	
+        && ((TFile*)opened)->IsWritable() ) {
+        output_file = (TFile*)opened;
+        output_file->cd();
+        cout << ofname << " is already opened." << endl;	
     }
     else {        
-	output_file = new TFile( ofname.c_str(), "recreate" );
-	if ( !output_file || output_file->IsZombie() ) {
-	    cout << "Creating " << ofname << " is failed." << endl;
-	    return anl::ANL_NG;
-	}
-	cout << ofname << " is created." << endl;
+        output_file = new TFile( ofname.c_str(), "recreate" );
+        if ( !output_file || output_file->IsZombie() ) {
+            cout << "Creating " << ofname << " is failed." << endl;
+            return anl::ANL_NG;
+        }
+        cout << "Create File : " << ofname << endl;
     }
     
     auto otname = get_parameter<std::string>("output_tree");
@@ -210,7 +212,7 @@ int ProjectCone3D::mod_endrun()
     cout << mod_name2() << "::mod_endrun" << endl;
     output_file->cd();
     output_tree->Write();
-    // output_file->Close();
+    output_file->Close();
     input_file->Close();
     return anl::ANL_OK;
 }
@@ -498,10 +500,7 @@ std::tuple<ProjectCone3D::hit, ProjectCone3D::hit> ProjectCone3D::get_sc2hit_eve
 
 bool ProjectCone3D::hittree_event::exist_branch(TTree* tree, TString key)
 {
-    if ( !tree->FindBranch(key) ) {
-	cout << "TBranch " << key << " is not found." << endl;
-	return false;
-    }
+    if ( !tree->FindBranch(key) ) return false;
     return true;
 }
 int ProjectCone3D::hittree_event::set_branch_address(TTree* tree)
@@ -509,7 +508,14 @@ int ProjectCone3D::hittree_event::set_branch_address(TTree* tree)
     tree->SetBranchAddress( "ti", &ti );
     tree->SetBranchAddress( "livetime", &livetime );
     tree->SetBranchAddress( "unixtime", &unixtime );
-    tree->SetBranchAddress( "ext1pps", &ext1pps );
+
+    auto branch_ext1pps = tree->FindBranch("ext1pps");
+    if ( branch_ext1pps==nullptr )
+        cout << "*TBranch ext1pps is not found." << endl;
+    else if ( branch_ext1pps->GetLeaf("ext1pps")->GetTypeName()!="UInt_t" )
+        cout << "*TBranch ext1pps cannot be read because its type is not UInt_t or unsigned int." << endl;
+    else 
+        tree->SetBranchAddress( "ext1pps", &ext1pps );
     tree->SetBranchAddress( "msec_counter", &msec_counter );
     
     if ( !exist_branch(tree, "nhit_lv3")  ) return anl::ANL_NG;
@@ -521,7 +527,7 @@ int ProjectCone3D::hittree_event::set_branch_address(TTree* tree)
     if ( !exist_branch(tree, "pos_y_lv3") ) return anl::ANL_NG;
     if ( !exist_branch(tree, "pos_z_lv3") ) return anl::ANL_NG;
 
-    static const int n = 10;
+    static const int n = 10; // maximum number of nhit_lv3
     detid_lv3.resize(n);
     epi_lv3.resize(n);
     epi_x_lv3.resize(n);
@@ -540,9 +546,14 @@ int ProjectCone3D::hittree_event::set_branch_address(TTree* tree)
     tree->SetBranchAddress( "pos_z_lv3", pos_z_lv3.data() );
 
     if ( exist_branch(tree, "coin_eventid") )
-	tree->SetBranchAddress( "coin_eventid", &coin_eventid );
+        tree->SetBranchAddress( "coin_eventid", &coin_eventid );
+    else
+        cout << "*TBranch coin_eventid is not found." << endl;
+    
     if ( exist_branch(tree, "coin_delta_t") )
-	tree->SetBranchAddress( "coin_delta_t", &coin_delta_t );
+        tree->SetBranchAddress( "coin_delta_t", &coin_delta_t );
+    else 
+        cout << "*TBranch coin_delta_t is not found." << endl;
     
     nentries = tree->GetEntries();
     current_entry = -1;

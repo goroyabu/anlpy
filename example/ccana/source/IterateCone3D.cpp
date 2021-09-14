@@ -21,7 +21,7 @@ using std::endl;
 #include <evs.hpp>
 
 IterateCone3D::IterateCone3D()
-    : anl::VANL_Module("IterateCone3D", "0.1"),
+    : anl::VANL_Module("IterateCone3D", "20210914"),
       input_file(nullptr), input_tree(nullptr), output_file(nullptr), sbp_image(nullptr)
 {
     /** Parameters can be modified via a method 'SetParameter' in Python **/
@@ -77,8 +77,8 @@ int IterateCone3D::mod_bgnrun()
 
     auto nentries = event.set_branch_address( chain, input_branch_name.c_str() );
     if ( nentries==0 ) {
-	cout << input_tree_name << " has NO event." << endl;
-	return anl::ANL_NG;
+        cout << input_tree_name << " has NO event." << endl;
+        return anl::ANL_NG;
     }
 
     auto ofname = get_parameter<std::string>("output_file");
