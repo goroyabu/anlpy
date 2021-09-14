@@ -13,6 +13,7 @@
 #include <map>
 
 #include <TTree.h>
+#include <TH1D.h>
 
 #include <bnk.hpp>
 #include <VANL_Module.hpp>
@@ -50,12 +51,24 @@ protected:
     std::string string_to_reset;
 
     /* For std::vector branches */
+    TH1D * h_of_order_of_velems;
     std::map< std::string, std::vector<int>* > vptr_list_int;
     std::map< std::string, std::vector<float>* > vptr_list_float;
     std::map< std::string, std::vector<double>* > vptr_list_double;
     int read_vint_branch(const std::string& key);
     int read_vfloat_branch(const std::string& key);
     int read_vdouble_branch(const std::string& key);
+
+    static double get_maximum_bin_center(TH1D* h)
+    {
+        double maxx = -1;
+        for ( auto i=h->GetXaxis()->GetNbins(); 0<i; --i ) {
+            if ( h->GetBinContent( i )==0 ) continue;
+            maxx = h->GetXaxis()->GetBinCenter( i );
+            break;
+        }
+        return maxx;
+    }
 
     void print_branch_info
     (const std::string& key, const std::string& type, int size);

@@ -62,8 +62,8 @@ class CMakeBuild(build_ext):
 
 setup(
     name='ccana',
-    version='0.0.0',
-    author='USER',
+    version='1.0.0',
+    author='Goro Yabu',
     author_email='',
     description='',
     long_description='',

@@ -40,7 +40,10 @@ PYBIND11_MODULE(anlpy, m) {
 	.def(pybind11::init<>())
 	.def(pybind11::init<const anl::ANLmanager&>())
 	.def("AddModule", &anl::ANLmanager::add_module)
-	.def("ReadData", &anl::ANLmanager::read_data)
+	.def(
+		"ReadData", &anl::ANLmanager::read_data,
+		pybind11::arg("nevent")=-1, pybind11::arg("print_freq")=10 
+		)
 	.def("ShowAnalysis", &anl::ANLmanager::show_analysis)	
 	.def("ShowStatus", &anl::ANLmanager::show_status)
 	.def("Quit", &anl::ANLmanager::quit)

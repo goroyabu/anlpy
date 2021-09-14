@@ -25,7 +25,8 @@ ProjectConeETCC::ProjectConeETCC()
     output_file(nullptr),
     output_tree(nullptr),
     image(nullptr),
-    h1_cone_filling_ratio(nullptr)
+    h1_cone_filling_ratio(nullptr),
+    etrack_calc_dedx(nullptr)
 {
     define_parameter<std::string>("input_file", "input.root");
     define_parameter<std::string>("input_tree", "hittree");
@@ -158,8 +159,12 @@ int ProjectConeETCC::mod_bgnrun()
             (TString)"cone_filling_ratio_"+copyid.c_str(),
             "cone_filling_ratio;Z(mm)", z_nbins, z_min, z_max );
     }
-    this->etrack_calc_dedx = new TH2D( "etrack_calc_dedx", "etrack",
-        110, -0.02*10-0.01, 0.02*100-0.01, 110, -0.02*10-0.01, 0.02*100-0.01);
+
+    const static double pixel_pitch = 0.02; //mm
+    this->etrack_calc_dedx = new TH2D( "track_image", "etrack",
+        110, -pixel_pitch*(10-0.5), pixel_pitch*(100-0.5), 
+        110, -pixel_pitch*(10-0.5), pixel_pitch*(100-0.5)
+        );
 
     auto source_posx = this->get_parameter<double>("source_posx");
     auto source_posy = this->get_parameter<double>("source_posy");
@@ -489,7 +494,7 @@ int ProjectConeETCC::DefineBranch(TTree* tree)
     tree->Branch( "phi_esti", &phi_esti, "phi_esti/F" );
     tree->Branch( "phi_geom", &phi_geom, "phi_geom/F" );
     tree->Branch( "de_over_dx", &de_over_dx, "de_over_dx/F" );
-    // tree->Branch( "etrack", "TH2D", &this->etrack_calc_dedx );
+    tree->Branch( "track_image", "TH2D", &(this->etrack_calc_dedx) );
     tree->Branch( "angle_inci", &angle_inci, "angle_inci/F" );
     tree->Branch( "prod_inci_phi", &prod_inci_phi, "prod_inci/F" );
     tree->Branch( "sum_epi_around_init", 

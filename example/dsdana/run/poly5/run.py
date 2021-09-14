@@ -33,6 +33,6 @@ if __name__ == '__main__':
     anl.AddModule(tmpWriteTTree)
 
     anl.ShowAnalysis()
-    anl.ReadData(10000000, 1000)
+    anl.ReadData()
 
     print("Test run of dsdana is succeeded !")

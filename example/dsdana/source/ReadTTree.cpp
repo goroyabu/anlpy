@@ -9,6 +9,7 @@
 
 #include <TFile.h>
 #include <TLeaf.h>
+#include <TH1D.h>
 
 #include <iostream>
 using std::cout;
@@ -20,11 +21,13 @@ using std::setw;
 
 #include <sstream>
 
+#include <cmath>
+
 #include <bnk.hpp>
 #include <evs.hpp>
 
 ReadTTree::ReadTTree()
-    : anl::VANL_Module("ReadTTree", "0.1"),
+    : anl::VANL_Module("ReadTTree", "0.2"),
       input_file(nullptr),
       input_tree(nullptr)
 {
@@ -74,6 +77,7 @@ int ReadTTree::mod_bgnrun()
     
     nentries = input_tree->GetEntries();
     cout << "Total Entries = " << nentries << endl;
+    evs::put("ANL_totalevents", nentries);
 
     auto branch_select = get_parameter<std::string>("branch_select");
     this->switch_branch(branch_select, ":", true);
@@ -81,6 +85,10 @@ int ReadTTree::mod_bgnrun()
     auto branch_ignore = get_parameter<std::string>("branch_ignore");
     this->switch_branch(branch_ignore, ":", false);
     
+    static const int nbins = 20;
+    this->h_of_order_of_velems
+        = new TH1D( "h_of_order_of_velems", "", nbins, -0.5, nbins-0.5 );
+
     auto status = this->read_all_branch();
     if ( status != anl::ANL_OK ) return anl::ANL_NG;
     
@@ -254,15 +262,15 @@ int ReadTTree::read_all_branch()
 	}
 	else if ( typestring == "vector<int>" ) {
 	    status = read_vint_branch( key );
-	    print_branch_info(key, "std::vector<int>", maxsize);
+	    // print_branch_info(key, "std::vector<int>", maxsize);
 	}
 	else if ( typestring == "vector<float>" ) {
 	    status = read_vfloat_branch( key );
-	    print_branch_info(key, "std::vector<float>", maxsize);
+	    // print_branch_info(key, "std::vector<float>", maxsize);
 	}
 	else if ( typestring == "vector<double>" ) {
 	    status = read_vdouble_branch( key );
-	    print_branch_info(key, "std::vector<double>", maxsize);
+	    // print_branch_info(key, "std::vector<double>", maxsize);
 	}	
 	
 	if ( status != anl::ANL_OK ) return anl::ANL_NG;
@@ -331,6 +339,16 @@ int ReadTTree::read_vint_branch(const std::string& key)
     vptr_list_int[ key ] = bnk::getvecptr<int>(key);
     bnk::setkeytosize<int>( key, "std::vector" );
     
+    this->input_tree->Draw( 
+        (TString)"log10("+key+"@.size())>>h_of_order_of_velems"
+        );
+    auto maxx = this->get_maximum_bin_center(
+        this->h_of_order_of_velems
+        );
+    auto nsize = std::pow(10,int(maxx))*1.5;
+    if ( 1<maxx ) bnk::resize<int>( key, nsize );
+    print_branch_info(key, "std::vector<int>", nsize );
+
     return anl::ANL_OK;
 }
 int ReadTTree::read_vfloat_branch(const std::string& key)
@@ -341,6 +359,16 @@ int ReadTTree::read_vfloat_branch(const std::string& key)
     if ( status != anl::ANL_OK ) return anl::ANL_NG;
     vptr_list_float[ key ] = bnk::getvecptr<float>(key);
     bnk::setkeytosize<float>( key, "std::vector" );
+
+    this->input_tree->Draw( 
+        (TString)"log10("+key+"@.size())>>h_of_order_of_velems"
+        );
+    auto maxx = this->get_maximum_bin_center(
+        this->h_of_order_of_velems
+        );
+    auto nsize = std::pow(10,int(maxx))*1.5;
+    if ( 1<maxx ) bnk::resize<float>( key, nsize );
+    print_branch_info(key, "std::vector<float>", nsize );
 
     return anl::ANL_OK;
 }
@@ -353,6 +381,16 @@ int ReadTTree::read_vdouble_branch(const std::string& key)
     if ( status != anl::ANL_OK ) return anl::ANL_NG;
     vptr_list_double[ key ] = bnk::getvecptr<double>(key);
     bnk::setkeytosize<double>( key, "std::vector" );
+
+    this->input_tree->Draw( 
+        (TString)"log10("+key+"@.size())>>h_of_order_of_velems"
+        );
+    auto maxx = this->get_maximum_bin_center(
+        this->h_of_order_of_velems
+        );
+    auto nsize = std::pow(10,int(maxx))*1.5;
+    if ( 1<nsize ) bnk::resize<double>( key, nsize );
+    print_branch_info(key, "std::vector<double>", nsize );
 
     return anl::ANL_OK;
 }
