@@ -80,11 +80,11 @@ class ComptreeEvent
             if ( current_entry>=nentries ) return false;
             auto bytes = tree->GetEntry(current_entry);
 
-            const static int max_bytes = 5000;
-            if ( bytes>max_bytes ) {
-                std::cout << "*Warning* : Entry " << current_entry << " has too big bytes to read (" << bytes << " bytes). ";
-                std::cout << "Disabling unread branches can reduce the bytes." << std::endl;
-            }
+            // const static int max_bytes = 5000;
+            // if ( bytes>max_bytes ) {
+            //     std::cout << "*Warning* : Entry " << current_entry << " has too big bytes to read (" << bytes << " bytes). ";
+            //     std::cout << "Disabling unread branches can reduce the bytes." << std::endl;
+            // }
             return true;
         }
         inline long long int GetEntries() const
