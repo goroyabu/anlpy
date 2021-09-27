@@ -1,6 +1,0 @@
-setup.py
-ccana.egg-info/PKG-INFO
-ccana.egg-info/SOURCES.txt
-ccana.egg-info/dependency_links.txt
-ccana.egg-info/not-zip-safe
-ccana.egg-info/top_level.txt
