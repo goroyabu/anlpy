@@ -844,22 +844,33 @@ int ComptreeEvent::SetBranchAddress(TTree* tree)
     this->cmos_dety.resize(alloc_size);
 
     tree->SetBranchStatus( "*", 0 );
+    tree->SetBranchStatus( "ti", 1 );
+    tree->SetBranchStatus( "livetime", 1 );
+    tree->SetBranchStatus( "trighitpat", 1 );
+    tree->SetBranchStatus( "unixtime", 1 );
+    tree->SetBranchStatus( "framecount", 1 );
+    tree->SetBranchStatus( "linecount", 1 );
     tree->SetBranchStatus( "merged_si_nhit", 1 );
     tree->SetBranchStatus( "merged_epi_si", 1 );
     tree->SetBranchStatus( "n_reconst", 1 );
     tree->SetBranchStatus( "epi1", 1 );
     tree->SetBranchStatus( "epi2", 1 );
+    tree->SetBranchStatus( "ratio_pt_to_al", 1 );
     tree->SetBranchStatus( "reconst_epi", 1 );
     tree->SetBranchStatus( "cdte_det*", 1 );
+    tree->SetBranchStatus( "ch", 1 );
+    tree->SetBranchStatus( "frame", 1 );
     tree->SetBranchStatus( "epi_total", 1 );
     tree->SetBranchStatus( "n_pixel", 1 );
     tree->SetBranchStatus( "epi_pixel_value", 1 );
-    tree->SetBranchStatus( "cmos_detx*", 1 );
+    tree->SetBranchStatus( "cmos_det*", 1 );
     tree->SetBranchStatus( "min_cmos_det*", 1 );
+    tree->SetBranchStatus( "max_cmos_det*", 1 );
     tree->SetBranchStatus( "sum_pixel_value_around_*", 1 );
     tree->SetBranchStatus( "eigen_ratio", 1 );
     tree->SetBranchStatus( "reconstructed", 1 );
     tree->SetBranchStatus( "init_pos_cmos_det*", 1 );
+    tree->SetBranchStatus( "end_pos_cmos_det*", 1 );
     tree->SetBranchStatus( "phi_cmos_det", 1 );
 
     tree->SetBranchAddress( "merged_si_nhit", &(this->merged_si_nhit) );
