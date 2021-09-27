@@ -60,7 +60,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='anltest',
-    version='0.0.1',
+    version='20210915',
     author='Goro Yabu',
     author_email='',
     description='Example package of ANLpy',

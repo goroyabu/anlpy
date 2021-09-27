@@ -19,12 +19,13 @@ using std::endl;
 #include <TCanvas.h>
 
 ProjectConeETCC::ProjectConeETCC()
-    : anl::VANL_Module("ProjectConeETCC", "0.1"),
+    : anl::VANL_Module("ProjectConeETCC", "20210927"),
     input_file(nullptr),
     input_tree(nullptr),
     output_file(nullptr),
     output_tree(nullptr),
     image(nullptr),
+    image_etcc(nullptr),
     h1_cone_filling_ratio(nullptr),
     etrack_calc_dedx(nullptr)
 {
@@ -162,7 +163,7 @@ int ProjectConeETCC::mod_bgnrun()
 
     const static double pixel_pitch = 0.02; //mm
     this->etrack_calc_dedx = new TH2D( "track_image", "etrack",
-        110, -pixel_pitch*(10-0.5), pixel_pitch*(100-0.5), 
+        110, -pixel_pitch*(10-0.5), pixel_pitch*(100-0.5),
         110, -pixel_pitch*(10-0.5), pixel_pitch*(100-0.5)
         );
 
@@ -222,8 +223,8 @@ int ProjectConeETCC::mod_bgnrun()
     auto arc_length_deg = get_parameter<double>("arc_length_deg");
     this->arc_length_rad = arc_length_deg*TMath::Pi()/180.0;
     this->arc_length_sigma = this->arc_length_rad/2.35;
-    cout << " - Length of Arc : " << arc_length_deg << "(deg)" << endl;
-    cout << this->arc_length_sigma << endl;
+    cout << " - Length of Arc : " << arc_length_deg << "(deg), ";
+    cout << this->arc_length_sigma << "(rad)" << endl;
 
     distance_index_omega = -1.0*get_parameter<double>("distance_index");
     cout << " - Distance-factor Omega : " << distance_index_omega << endl;
@@ -290,7 +291,7 @@ int ProjectConeETCC::mod_bgnrun()
     this->theta_elec = 0.0;
     this->phi_esti = 0.0;
     this->phi_geom = 0.0;
-    
+
     this->de_over_dx = 0.0;
     this->angle_inci = 0.0;
 
@@ -455,8 +456,11 @@ int ProjectConeETCC::mod_endrun()
     this->h1_ene_sum_cmos_cdte->Write();
 
     this->output_file->Close();
+    cout << " - Closed : " << this->get_parameter<std::string>("output_file") << endl;
 
     this->input_file->Close();
+    cout << " - Closed : " << this->get_parameter<std::string>("input_file") << endl;
+
     return anl::ANL_OK;
 }
 
@@ -494,12 +498,17 @@ int ProjectConeETCC::DefineBranch(TTree* tree)
     tree->Branch( "phi_esti", &phi_esti, "phi_esti/F" );
     tree->Branch( "phi_geom", &phi_geom, "phi_geom/F" );
     tree->Branch( "de_over_dx", &de_over_dx, "de_over_dx/F" );
-    tree->Branch( "track_image", "TH2D", &(this->etrack_calc_dedx) );
+
+    if ( !tree->Branch( "track_image", "TH2D", &(this->etrack_calc_dedx) ) ) {
+        cout << "Creating a branch of TH2D is failed." << endl;
+        return anl::ANL_NG;
+    }
+
     tree->Branch( "angle_inci", &angle_inci, "angle_inci/F" );
     tree->Branch( "prod_inci_phi", &prod_inci_phi, "prod_inci/F" );
-    tree->Branch( "sum_epi_around_init", 
+    tree->Branch( "sum_epi_around_init",
         &sum_epi_around_init, "sum_epi_around_init/F");
-    tree->Branch( "sum_epi_forward_init", 
+    tree->Branch( "sum_epi_forward_init",
         &sum_epi_forward_init, "sum_epi_forward_init/F");
 
     // if ( event.ExistBranch("coin_eventid") )
@@ -543,7 +552,7 @@ void ProjectConeETCC::CalcComptonEvent(const Hit& si, const Hit& cdte)
 
     auto init_xbin = this->etrack_calc_dedx->GetXaxis()->FindBin( init_x );
     auto init_ybin = this->etrack_calc_dedx->GetYaxis()->FindBin( init_y );
-    
+
     this->sum_epi_around_init = 0.0;
     this->sum_epi_forward_init = 0.0;
     for ( auto xbin=init_xbin-2; xbin<=init_xbin+2; ++xbin ) {
@@ -557,12 +566,12 @@ void ProjectConeETCC::CalcComptonEvent(const Hit& si, const Hit& cdte)
 
             if ( 0 <= cos_phi )
                 if ( xbin < init_xbin ) continue;
-            else 
+            else
                 if ( init_xbin < xbin ) continue;
 
             if ( 0<= sin_phi )
                 if ( ybin < init_ybin ) continue;
-            else 
+            else
                 if ( init_ybin < ybin ) continue;
 
             this->sum_epi_forward_init += cont;
@@ -599,7 +608,7 @@ void ProjectConeETCC::CalcComptonEvent(const Hit& si, const Hit& cdte)
     auto angle_phi_rad = TVector2::Phi_mpi_pi( si.Phi() + TMath::Pi()*0.5 );
     this->theta_kine = angle_theta_rad;
     this->phi_esti = angle_phi_rad;
-    
+
     auto vec_norm_z = TVector3( 0, 0, -1 );
     auto source_to_scat = scat - this->source_position;
     auto vec_norm_inci = source_to_scat; vec_norm_inci.Unit();
@@ -722,9 +731,9 @@ bool ProjectConeETCC::Projection(const Hit& si, const Hit& cdte)
             // cout << delta_phi << "," << si.Phi() << "," << angle_phi << endl;
             weight *= TMath::Exp( -0.5* TMath::Power( delta_phi/this->arc_length_sigma, 2 ) );
             image_etcc->SetBinContent( i, image_etcc->GetBinContent(i)+weight );
+            ++n_of_filled_voxels;
         }
 
-        ++n_of_filled_voxels;
     }
 
     const static int threshold_n_of_filled_voxels = 10;
@@ -833,6 +842,25 @@ int ComptreeEvent::SetBranchAddress(TTree* tree)
     this->epi_pixel_value.resize(alloc_size);
     this->cmos_detx.resize(alloc_size);
     this->cmos_dety.resize(alloc_size);
+
+    tree->SetBranchStatus( "*", 0 );
+    tree->SetBranchStatus( "merged_si_nhit", 1 );
+    tree->SetBranchStatus( "merged_epi_si", 1 );
+    tree->SetBranchStatus( "n_reconst", 1 );
+    tree->SetBranchStatus( "epi1", 1 );
+    tree->SetBranchStatus( "epi2", 1 );
+    tree->SetBranchStatus( "reconst_epi", 1 );
+    tree->SetBranchStatus( "cdte_det*", 1 );
+    tree->SetBranchStatus( "epi_total", 1 );
+    tree->SetBranchStatus( "n_pixel", 1 );
+    tree->SetBranchStatus( "epi_pixel_value", 1 );
+    tree->SetBranchStatus( "cmos_detx*", 1 );
+    tree->SetBranchStatus( "min_cmos_det*", 1 );
+    tree->SetBranchStatus( "sum_pixel_value_around_*", 1 );
+    tree->SetBranchStatus( "eigen_ratio", 1 );
+    tree->SetBranchStatus( "reconstructed", 1 );
+    tree->SetBranchStatus( "init_pos_cmos_det*", 1 );
+    tree->SetBranchStatus( "phi_cmos_det", 1 );
 
     tree->SetBranchAddress( "merged_si_nhit", &(this->merged_si_nhit) );
     tree->SetBranchAddress( "merged_epi_si", this->merged_epi_si.data() );
