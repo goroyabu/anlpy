@@ -19,7 +19,7 @@ using std::endl;
 #include <ANLmanager.hpp>
 
 CoupleHit::CoupleHit()
-    : VANL_Module("CoupleHit", "2.0"), mDatabase(nullptr),
+    : VANL_Module("CoupleHit", "20210927"), mDatabase(nullptr),
       m_spect(nullptr), m_image(nullptr)
 {
     m_delta_e_threshold = 5.0;
@@ -32,14 +32,14 @@ int CoupleHit::mod_bgnrun()
 
     //auto manager = new anl::ANLmanager();
     auto manager = anl::ANLmanager::Instance();
-    
+
     mDatabase = (DSDdatabase*)manager.get_module("DSDdatabase");
     if ( !mDatabase || mDatabase->mod_name()!="DSDdatabase") {
 	return anl::ANL_NG;
     }
     //mDatabase->GetDetIDList(&m_detid_list);
     m_detid_list = mDatabase->GetListOfDetids();
-    
+
     auto status = this->bnkDefAll();
     if ( status!=anl::ANL_OK ) return status;
 
@@ -68,7 +68,7 @@ int CoupleHit::mod_ana()
 
     auto status = this->clearVectorAll();
     if ( status!=anl::ANL_OK ) return status;
-    
+
     status = this->bnkGetAll();
     if ( status!=anl::ANL_OK ) return status;
 
@@ -87,7 +87,7 @@ int CoupleHit::mod_endrun()
     // 	m_image->Write();
     // }
     //status = ANL_OK;
-    cout << "CoupleHit is closed." << endl;
+    cout << " - End : CoupleHit" << endl;
     return anl::ANL_OK;
 }
 // void CoupleHit::mod_exit(int &status)
@@ -121,7 +121,7 @@ int CoupleHit::bnkDefAll()
     // 	cout << "Error : All of Lv2 data must be defined in BNK" << endl;
     // 	return ANL_NG;
     // }
-    
+
     bnk::define<int>  ("nhit_lv3",             1);
     bnk::define<int>  ("detid_lv3",          128);
     bnk::define<float>("epi_lv3",            128);
@@ -150,7 +150,7 @@ int CoupleHit::bnkDefAll()
     bnk::setkeytosize<float>("width_z_lv3", "nhit_lv3");
     bnk::setkeytosize<int>("lv2signal_id_x_lv3", "n_lv2signal_x_lv3");
     bnk::setkeytosize<int>("lv2signal_id_y_lv3", "n_lv2signal_y_lv3");
-    
+
     return anl::ANL_OK;
 }
 int CoupleHit::bnkGetAll()
@@ -195,12 +195,12 @@ int CoupleHit::bnkPutAll()
     bnk::put<int>  ("n_lv2signal_y_lv3", m_n_lv2signal_y_lv3);
     bnk::put<int>  ("lv2signal_id_x_lv3", m_lv2signal_id_x_lv3, 0, m_n_lv2signal_x_lv3);
     bnk::put<int>  ("lv2signal_id_y_lv3", m_lv2signal_id_y_lv3, 0, m_n_lv2signal_y_lv3);
-    
+
     if (m_nhit_lv3==1)      evs::set("nhit_lv3==1");
     else if (m_nhit_lv3==2) evs::set("nhit_lv3==2");
     else if (m_nhit_lv3==3) evs::set("nhit_lv3==3");
     else if (m_nhit_lv3>=4) evs::set("nhit_lv3>=4");
-    
+
     for ( int i=0; i<m_nhit_lv3; i++ ) {
 	m_image->Fill(m_pos_x_lv3[i], m_pos_y_lv3[i]);
 	m_spect->Fill(m_epi_lv3[i]);
@@ -229,7 +229,7 @@ int CoupleHit::clearVectorAll()
 int CoupleHit::reconstructLv2toLv3(int detid)
 {
     this->extractOneDetector(detid);
-    
+
     this->sortIndex(m_nsignal_x, m_epi_x, &m_sorted_index_x);
     this->sortIndex(m_nsignal_y, m_epi_y, &m_sorted_index_y);
 
@@ -249,23 +249,23 @@ int CoupleHit::reconstructLv2toLv3(int detid)
     }
 
     if(m_nsignal_x == 1 && m_nsignal_y == 1)
-	
+
 	this->case1and1(detid, xsignal[0], ysignal[0]);
-    
+
     else if(m_nsignal_x == 1 && m_nsignal_y == 2)
-	
+
 	this->case1and2(detid, xsignal[0], ysignal[0], ysignal[1]);
-    
+
     else if(m_nsignal_x == 2 && m_nsignal_y == 1)
-	
+
 	this->case2and1(detid, xsignal[0], xsignal[1], ysignal[0]);
-    
+
     else if(m_nsignal_x == 2 && m_nsignal_y == 2)
 
 	this->case2and2(detid, xsignal[0], xsignal[1], ysignal[0], ysignal[1]);
-    
+
     else this->case3over(detid, xsignal, ysignal);
-        
+
     return anl::ANL_OK;
 }
 void CoupleHit::extractOneDetector(int detid)
@@ -322,17 +322,17 @@ int CoupleHit::case1and1(int detid, const signal_data& x0, const signal_data& y0
     // mDatabase->GetWidthZ(detid, 0, &width_z);
     auto pos_z = mDatabase->GetDetectorPosz( detid );
     auto width_z = mDatabase->GetDetectorWidthz( detid );
-    
+
     hit_data hit(detid);
 
     hit.set_epi3(( x0.epi + y0.epi ) * 0.5, x0.epi, y0.epi)
-	
+
 	.set_pos3(x0.pos, y0.pos, pos_z)
-	
+
 	.set_wid3(x0.width, y0.width, width_z)
-	
+
 	.set_ind2(x0.index, y0.index);
-    
+
     push_back_hit(hit);
 
     return anl::ANL_OK;
@@ -344,44 +344,44 @@ int CoupleHit::case1and2(int detid, const signal_data& x0, const signal_data& y0
     // mDatabase->GetWidthZ(detid, 0, &width_z);
     auto pos_z = mDatabase->GetDetectorPosz( detid );
     auto width_z = mDatabase->GetDetectorWidthz( detid );
-    
+
     float epi_total = y0.epi + y1.epi;
     hit_data data(detid);
 
     if( fabs(x0.epi-epi_total) <= m_delta_e_threshold ){
-	
+
 	data.set_epi3(y0.epi, x0.epi * y0.epi / ( y0.epi + y1.epi), y0.epi)
-	    
+
 	    .set_pos3(x0.pos, y0.pos, pos_z)
-	    
+
 	    .set_wid3(x0.width, y0.width, width_z)
-	    
+
 	    .set_ind2(x0.index, y0.index);
-	
-	push_back_hit(data);    
-	
+
+	push_back_hit(data);
+
 	data.set_epi3(y1.epi, x0.epi * y1.epi / ( y0.epi + y1.epi), y1.epi)
-	    
+
 	    .set_pos3(x0.pos, y1.pos, pos_z)
-	    
+
 	    .set_wid3(x0.width, y1.width, width_z)
-	    
+
 	    .set_ind2(x0.index, y1.index);
-	
-	push_back_hit(data);    
+
+	push_back_hit(data);
 
     }else if( fabs(x0.epi-y0.epi) <= m_delta_e_threshold &&
 	      fabs(x0.epi-y0.epi) <= fabs(x0.epi-y1.epi) ){
 
 	return case1and1(detid, x0, y0);
-	
+
     }else if( fabs(x0.epi-m_epi_y[1]) <= m_delta_e_threshold &&
 	      fabs(x0.epi-m_epi_y[1]) <= fabs(x0.epi-y0.epi) ){
 
 	return case1and1(detid, x0, y1);
-	
+
     }
-    
+
     return anl::ANL_OK;
 }
 int CoupleHit::case2and1(int detid, const signal_data& x0, const signal_data& x1, const signal_data& y0)
@@ -396,39 +396,39 @@ int CoupleHit::case2and1(int detid, const signal_data& x0, const signal_data& x1
     hit_data data(detid);
 
     if( fabs(y0.epi-epi_total) <= m_delta_e_threshold ){
-	
+
 	data.set_epi3(x0.epi, x0.epi, y0.epi * x0.epi / ( x0.epi + x1.epi) )
-	    
+
 	    .set_pos3(x0.pos, y0.pos, pos_z)
-	    
+
 	    .set_wid3(x0.width, y0.width, width_z)
-	    
+
 	    .set_ind2(x0.index, y0.index);
-	
-	push_back_hit(data);    
-	
-	data.set_epi3(x1.epi, x1.epi, y0.epi * x1.epi / ( x0.epi + x1.epi) )
-	    
-	    .set_pos3(x1.pos, y0.pos, pos_z)
-	    
-	    .set_wid3(x1.width, y0.width, width_z)
-	    
-	    .set_ind2(x1.index, y0.index);
-	    
+
 	push_back_hit(data);
-	
+
+	data.set_epi3(x1.epi, x1.epi, y0.epi * x1.epi / ( x0.epi + x1.epi) )
+
+	    .set_pos3(x1.pos, y0.pos, pos_z)
+
+	    .set_wid3(x1.width, y0.width, width_z)
+
+	    .set_ind2(x1.index, y0.index);
+
+	push_back_hit(data);
+
     }else if( fabs(y0.epi-x0.epi) <= m_delta_e_threshold &&
 	      fabs(y0.epi-x0.epi) <= fabs(y0.epi-x1.epi) ){
 
 	return case1and1(detid, x0, y0);
-	
+
     }else if( fabs(y0.epi-x1.epi) <= m_delta_e_threshold &&
 	      fabs(y0.epi-x1.epi) <= fabs(y0.epi-x0.epi) ){
-	
+
 	return case1and1(detid, x1, y0);
-	
+
     }
-    
+
     return anl::ANL_OK;
 }
 int CoupleHit::case2and2(int detid, const signal_data& x0, const signal_data& x1, const signal_data& y0, const signal_data& y1)
@@ -446,74 +446,74 @@ int CoupleHit::case2and2(int detid, const signal_data& x0, const signal_data& x1
     float delta_e_x1_y0 = fabs(x1.epi-y0.epi);
     float delta_e_x1_y1 = fabs(x1.epi-y1.epi);
     float dev_e_total = x0.epi+x1.epi-y0.epi-y1.epi;
-    
+
     if( fabs(dev_e_total) <= m_delta_e_threshold ){
 	if(delta_e_x0_y0 <= m_delta_e_threshold &&
 	   delta_e_x1_y1 <= m_delta_e_threshold ){
-       
+
 	    data.set_epi3(x0.epi, x0.epi, y0.epi)
-		
+
 		.set_pos3(x0.pos, y0.pos, pos_z)
-		
+
 		.set_wid3(x0.width, y0.width, width_z)
-		
+
 		.set_ind2(x0.index, y0.index);
-	    
-	    push_back_hit(data);    
-	    
-	    data.set_epi3(x1.epi, x1.epi, y1.epi)
-		
-		.set_pos3(x1.pos, y1.pos, pos_z)
-		
-		.set_wid3(x1.width, y1.width, width_z)
-		
-		.set_ind2(x1.index, y1.index);
-	    
+
 	    push_back_hit(data);
-	
+
+	    data.set_epi3(x1.epi, x1.epi, y1.epi)
+
+		.set_pos3(x1.pos, y1.pos, pos_z)
+
+		.set_wid3(x1.width, y1.width, width_z)
+
+		.set_ind2(x1.index, y1.index);
+
+	    push_back_hit(data);
+
 	}else if( delta_e_x0_y1 <= m_delta_e_threshold &&
 		  delta_e_x1_y0 <= m_delta_e_threshold ){
-	    
+
 	    data.set_epi3(x0.epi, x0.epi, y0.epi)
-		
+
 		.set_pos3(x0.pos, y0.pos, pos_z)
-		
+
 		.set_wid3(x0.width, y0.width, width_z)
-		
+
 		.set_ind2(x0.index, y0.index);
-	    
-	    push_back_hit(data);    
-	    
+
+	    push_back_hit(data);
+
 	    data.set_epi3(x1.epi, x1.epi, y1.epi)
-		
+
 		.set_pos3(x1.pos, y1.pos, pos_z)
-		
+
 		.set_wid3(x1.width, y1.width, width_z)
-		
+
 		.set_ind2(x1.index, y1.index);
-	    
+
 	    push_back_hit(data);
 	}
     }else if(dev_e_total < 0){
-	
+
 	if( fabs(x0.epi+x1.epi-y0.epi) <= m_delta_e_threshold )
 
 	    return case2and1(detid, x0, x1, y0);
-	
+
 	else if( fabs(x0.epi+x1.epi-y1.epi) <= m_delta_e_threshold )
-	    
+
 	    return case2and1(detid, x0, x1, y1);
-	
+
     }else if(dev_e_total > 0){
-	
+
 	if( fabs(x0.epi-y0.epi-y1.epi) <= m_delta_e_threshold )
 
 	    return case1and2(detid, x0, y0, y1);
-	
+
 	else if( fabs(x1.epi-y0.epi-y1.epi) <= m_delta_e_threshold )
-	    
+
 	    return case1and2(detid, x1, y0, y1);
-	
+
     }
     return anl::ANL_OK;
 }
@@ -527,9 +527,9 @@ int CoupleHit::case3over(int detid, const std::vector<signal_data>& xsignal, std
     // auto width_z = mDatabase->GetDetectorWidthz( detid );
 
     int maxsize = std::min( (int)xsignal.size(), (int)ysignal.size() );
-    
+
     for(int i=0; i<maxsize; ++i){
-	
+
 	int index_x = xsignal[i].sorted_index;
 	int index_y = ysignal[i].sorted_index;
 
@@ -537,7 +537,7 @@ int CoupleHit::case3over(int detid, const std::vector<signal_data>& xsignal, std
 	    continue;
 
 	case1and1( detid, xsignal[index_x], ysignal[index_y] );
-	
+
     }
     return anl::ANL_OK;
 }

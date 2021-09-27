@@ -40,7 +40,7 @@ def analysis_1data(input_filename):
     anl.AddModule(tmpWriteTTree)
 
     anl.ShowAnalysis()
-    anl.ReadData(10000000, 1000)
+    anl.ReadData()
     anl.Quit()
     print("")
 

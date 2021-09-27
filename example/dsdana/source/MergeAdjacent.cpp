@@ -22,7 +22,7 @@ using std::endl;
 // const int MergeAdjacent::materialid_cdte = 1;
 
 MergeAdjacent::MergeAdjacent()
-    : VANL_Module("MergeAdjacent", "1.0"),
+    : VANL_Module("MergeAdjacent", "20210927"),
       mDatabase(nullptr), m_histogram(nullptr)
 {
     m_ndetector = 1;
@@ -52,7 +52,7 @@ int MergeAdjacent::mod_bgnrun()
     static const int nbins_h2 = 128;
     static const double xmin_h2 = -0.5;
     static const double xmax_h2 = nbins_h2-0.5;
-    
+
     for ( auto detid : m_detid_list ) {
 	TString hname = Form("h2_multi_lv1_det%02d", detid);
 	TString htitle = Form("Signals before Ecut on det %02d;N of X-signals;N of Y-signals", detid);
@@ -60,16 +60,16 @@ int MergeAdjacent::mod_bgnrun()
 			    nbins_h2, xmin_h2, xmax_h2 );
 	list_of_h2_multi_lv1[detid] = h2;
 	nsignal_lv1_on_1det[detid] = std::make_pair(0,0);
-    }    
-    
+    }
+
     for ( auto detid : m_detid_list ) {
 	TString hname = Form("h2_multi_lv2a_det%02d", detid);
 	TString htitle = Form("Signals over Ethr on det %02d;N of X-signals;N of Y-signals", detid);
 	auto h2 = new TH2D( hname, htitle, nbins_h2, xmin_h2, xmax_h2,
 			    nbins_h2, xmin_h2, xmax_h2 );
 	list_of_h2_multi_lv2a[detid] = h2;
-    }    
-    
+    }
+
     for ( auto detid : m_detid_list ) {
 	TString hname = Form("h2_multi_lv2b_det%02d", detid);
 	TString htitle = Form("Merged Signals on det %02d;N of merged X-signals;N of Y-signals", detid);
@@ -77,7 +77,7 @@ int MergeAdjacent::mod_bgnrun()
 			    nbins_h2, xmin_h2, xmax_h2 );
 	list_of_h2_multi_lv2b[detid] = h2;
     }
-    
+
     auto status = this->bnkDefAll();
     if ( status!=anl::ANL_OK ) return status;
 
@@ -97,7 +97,7 @@ int MergeAdjacent::mod_bgnrun()
     enable_uniform_ethre_cdte = get_parameter<int>("enable_uniform_ethre_cdte");
     uniform_ethre_si = get_parameter<double>("uniform_ethre_si");
     uniform_ethre_cdte = get_parameter<double>("uniform_ethre_cdte");
-    
+
     return anl::ANL_OK;
 }
 // int MergeAdjacent::his()
@@ -120,7 +120,7 @@ int MergeAdjacent::mod_ana()
 
     for(auto detid : m_detid_list)
 	this->convertLv1toLv2(detid);
-    
+
     /* end ana */
     this->bnkPutAll();
     return anl::ANL_OK;
@@ -133,8 +133,8 @@ int MergeAdjacent::mod_endrun()
     // 	return anl::ANL_OK;
 
     // auto dir = gDirectory->mkdir("his_MergeAdjacent");
-    // if ( !dir ) return anl::ANL_OK;    
-    
+    // if ( !dir ) return anl::ANL_OK;
+
     // dir->cd();
     // for ( auto mp : list_of_h2_multi_lv1 ) {
     // 	mp.second->GetXaxis()->SetRangeUser(0, 10);
@@ -143,18 +143,18 @@ int MergeAdjacent::mod_endrun()
     // }
     // for ( auto mp : list_of_h2_multi_lv2a ) {
     // 	mp.second->GetXaxis()->SetRangeUser(0, 10);
-    // 	mp.second->GetYaxis()->SetRangeUser(0, 10);	
+    // 	mp.second->GetYaxis()->SetRangeUser(0, 10);
     // 	mp.second->Write();
     // }
     // for ( auto mp : list_of_h2_multi_lv2b ) {
     // 	mp.second->GetXaxis()->SetRangeUser(0, 10);
-    // 	mp.second->GetYaxis()->SetRangeUser(0, 10);	
+    // 	mp.second->GetYaxis()->SetRangeUser(0, 10);
     // 	mp.second->Write();
     // }
 
     // dir->cd("..");
 
-    cout << "MergeAdjacent is closed." << endl;
+    cout << " - End : MergeAdjacent" << endl;
     return anl::ANL_OK;
 }
 int MergeAdjacent::bnkDefAll()
@@ -190,7 +190,7 @@ int MergeAdjacent::bnkDefAll()
 
     bnk::setkeytosize<int>("lv1signal_id_x_lv2", "n_lv1signal_x_lv2");
     bnk::setkeytosize<int>("lv1signal_id_y_lv2", "n_lv1signal_y_lv2");
-    
+
     return anl::ANL_OK;
 }
 int MergeAdjacent::bnkGetAll()
@@ -204,7 +204,7 @@ int MergeAdjacent::bnkGetAll()
     m_stripid_y_lv1 = bnk::getv<int>  ("stripid_y_lv1");
     m_epi_x_lv1 = bnk::getv<float>("epi_x_lv1");
     m_epi_y_lv1 = bnk::getv<float>("epi_y_lv1");
-    
+
     m_lv1data_x_list.clear();
     m_lv1data_y_list.clear();
     for(int i=0; i<m_nsignal_x_lv1; ++i){
@@ -235,9 +235,9 @@ int MergeAdjacent::bnkPutAll()
     bnk::put<int>  ("n_lv1signal_y_lv2",     m_n_lv1signal_y_lv2);
     bnk::put<int>  ("lv1signal_id_x_lv2",    m_lv1signal_id_x_lv2,    0, m_n_lv1signal_x_lv2);
     bnk::put<int>  ("lv1signal_id_y_lv2",    m_lv1signal_id_y_lv2,    0, m_n_lv1signal_y_lv2);
-    
+
     // m_multipli_his->Fill(m_nsignal_x_lv2, m_nsignal_y_lv2);
-    
+
     if( m_nsignal_x_lv2 == 0 || m_nsignal_y_lv2 == 0 ) return anl::ANL_SKIP;
     if( m_nsignal_x_lv2 == 1 && m_nsignal_y_lv1 == 1 )
 	evs::set("nsignal_x_lv2==1 && nsignal_y_lv2==1");
@@ -258,8 +258,8 @@ int MergeAdjacent::bnkPutAll()
     if( m_nsignal_y_lv2 == 1 && m_n_merged_strips_y_lv2[0] == 1 )
 	evs::set("nsignal_y_lv2==1 && n_merged_strips_y_lv2==1");
     else if( m_nsignal_y_lv2 == 1 && m_n_merged_strips_y_lv2[0] == 2 )
-	evs::set("nsignal_y_lv2==1 && n_merged_strips_y_lv2==2");    
-    
+	evs::set("nsignal_y_lv2==1 && n_merged_strips_y_lv2==2");
+
     return anl::ANL_OK;
 }
 int MergeAdjacent::clearVectorAll()
@@ -282,7 +282,7 @@ int MergeAdjacent::clearVectorAll()
     m_lv1signal_id_y_lv2.clear();
     //m_lv1signal_id_x.clear();
     //m_lv1signal_id_y.clear();
-    
+
     for ( auto mp : nsignal_lv1_on_1det ) {
     	//auto&& [ nx, ny ] = mp.second;
     	//nx = 0; ny = 0;
@@ -295,12 +295,12 @@ void MergeAdjacent::extractOneDetector(int detid, std::vector<lv1data>& xdata, s
     xdata.clear();
     for(int i=0; i<m_nsignal_x_lv1; ++i){
         if( m_lv1data_x_list[i].detid != detid ) continue;
-	xdata.emplace_back(m_lv1data_x_list[i]);	
+	xdata.emplace_back(m_lv1data_x_list[i]);
     }
     ydata.clear();
     for(int i=0; i<m_nsignal_y_lv1; ++i){
         if( m_lv1data_y_list[i].detid != detid ) continue;
-	ydata.emplace_back(m_lv1data_y_list[i]);	
+	ydata.emplace_back(m_lv1data_y_list[i]);
     }
 }
 int MergeAdjacent::extractSignalsOverThreshold()
@@ -317,7 +317,7 @@ int MergeAdjacent::extractSignalsOverThreshold()
 	auto detid_stripid = std::make_pair(detid, stripid);
 	// cout << "pair ";
 	nsignal_lv1_on_1det[detid].first++;
-	
+
 	//auto ethre = mDatabase->GetEthre( m_lv1data_x_list[i].stripid );
 	// auto mate = mDatabase->GetMaterial( m_lv1data_x_list[i].stripid );
 	// auto ethre = energy_threshold( mate, m_lv1data_x_list[i].stripid );
@@ -325,10 +325,10 @@ int MergeAdjacent::extractSignalsOverThreshold()
 	auto mate = mDatabase->GetMaterial( detid_stripid );
 	// cout << "ethre ";
 	auto ethre = energy_threshold( mate, detid_stripid );
-	// cout << mate << " " << detid << "," << stripid << endl; 
+	// cout << mate << " " << detid << "," << stripid << endl;
 	// if ( m_lv1data_x_list[i].stripid>511 )
 	//     cout << "mate,stripid,ethre=" << mate << " " << m_lv1data_x_list[i].stripid << " " << ethre << endl;
-	
+
 	if( m_lv1data_x_list[i].epi < ethre ){
 	    m_lv1data_x_list.erase(m_lv1data_x_list.begin() + i);
 	    --m_nsignal_x_lv1;
@@ -347,7 +347,7 @@ int MergeAdjacent::extractSignalsOverThreshold()
 	auto detid_stripid = std::make_pair(detid, stripid);
 	// cout << "pair ";
 	nsignal_lv1_on_1det[detid].second++;
-	
+
 	//auto ethre = mDatabase->GetEthre( m_lv1data_y_list[i].stripid );
 	auto mate = mDatabase->GetMaterial( detid_stripid );
 	// cout << "mate ";
@@ -363,12 +363,12 @@ int MergeAdjacent::extractSignalsOverThreshold()
 
     // cout << "y ok";
     // cout << "fill";
-    
+
     // for ( auto mp : nsignal_lv1_on_1det ) {
     // 	auto [ detid, p ] = mp;
     // 	list_of_h2_multi_lv1[ detid ]->Fill( p.first, p.second );
     // }
-    
+
     // cout << " ext end" << endl;
     // if( m_nsignal_x_lv1 == 0 && m_nsignal_y_lv1 == 0 ) return anl::ANL_SKIP;
     return anl::ANL_OK;
@@ -377,15 +377,15 @@ int MergeAdjacent::convertLv1toLv2(int detid)
 {
     std::vector<lv1data> xdata, ydata;
     this->extractOneDetector(detid, xdata, ydata);
-    
+
     list_of_h2_multi_lv2a[detid]->Fill( xdata.size(), ydata.size() );
-    
+
     const int maxloopx = (int)xdata.size();
     int nloopx = 0;
     while( (int)xdata.size() > 0 ){
 	if( nloopx >= maxloopx ) break;
 	this->fillHistogram(xdata);
-	
+
         int nstrip = getNstrip( m_histogram );
         float epi = getEPI( m_histogram );
         float pos = getPos( m_histogram );
@@ -398,7 +398,7 @@ int MergeAdjacent::convertLv1toLv2(int detid)
 	++m_nsignal_x_lv2;
 
 	m_n_lv1signal_x_lv2 += nstrip;
-	for( int lv1index : m_filled_index_list ) 
+	for( int lv1index : m_filled_index_list )
 	    m_lv1signal_id_x_lv2.emplace_back(lv1index);
 
 	m_histogram->Reset();
@@ -407,7 +407,7 @@ int MergeAdjacent::convertLv1toLv2(int detid)
 
 	nloopx++;
     }
-    
+
     const int maxloopy = (int)ydata.size();
     int nloopy = 0;
     while( (int)ydata.size() > 0 ){
@@ -435,7 +435,7 @@ int MergeAdjacent::convertLv1toLv2(int detid)
     }
 
     list_of_h2_multi_lv2b[detid]->Fill( nloopx, nloopy );
-    
+
     return anl::ANL_OK;
 }
 int MergeAdjacent::fillHistogram(std::vector<lv1data> &data_list)
@@ -450,7 +450,7 @@ int MergeAdjacent::fillHistogram(std::vector<lv1data> &data_list)
 	stripid = data_list[i].stripid;
 	epi = data_list[i].epi;
 	auto detid_stripid = std::make_pair( detid, stripid );
-	
+
 	if( mDatabase->IsXside( detid_stripid ) ){
 	    pos = mDatabase->GetPosx( detid_stripid );
             width = mDatabase->GetWidthx( detid_stripid );
@@ -472,7 +472,7 @@ int MergeAdjacent::fillHistogram(std::vector<lv1data> &data_list)
             m_stripid_list.emplace_back(stripid);
             m_filled_index_list.emplace_back(index);
 	    data_list.erase( data_list.begin()+i );
-        }	
+        }
     }
     // cout << " fill end" << endl;
     return anl::ANL_OK;

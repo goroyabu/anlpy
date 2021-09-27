@@ -27,7 +27,7 @@ using std::setw;
 #include <evs.hpp>
 
 ReadTTree::ReadTTree()
-    : anl::VANL_Module("ReadTTree", "0.2"),
+    : anl::VANL_Module("ReadTTree", "20210927"),
       input_file(nullptr),
       input_tree(nullptr)
 {
@@ -57,26 +57,26 @@ int ReadTTree::mod_bgnrun()
     cout << "  ReadTTree::mod_bgnrun  " << endl;
     cout << "=========================" << endl;
 
-    
+
     auto file_name = get_parameter<std::string>( "file_name" );
-    input_file = new TFile( file_name.c_str() );    
+    input_file = new TFile( file_name.c_str() );
     if ( !input_file || input_file->IsZombie() ) {
 	cerr << "***Error*** : " << file_name << " is not found" << endl;
 	return anl::ANL_NG;
     }
-    cout << "Opening " << file_name << " is succeeded." << endl;
+    cout << " - Opened : " << file_name << endl;
 
-    
+
     auto tree_name = get_parameter<std::string>( "tree_name" );
     input_tree = (TTree*)input_file->Get( tree_name.c_str() );
     if ( !input_tree ) {
 	cerr << "***Error*** : " << tree_name << " is not found" << endl;
 	return anl::ANL_NG;
     }
-    cout << tree_name << " is found." << endl;
-    
+    cout << " - Found : " << tree_name << endl;
+
     nentries = input_tree->GetEntries();
-    cout << "Total Entries = " << nentries << endl;
+    cout << " - Total Entries = " << nentries << endl;
     evs::put("ANL_totalevents", nentries);
 
     auto branch_select = get_parameter<std::string>("branch_select");
@@ -84,14 +84,14 @@ int ReadTTree::mod_bgnrun()
 
     auto branch_ignore = get_parameter<std::string>("branch_ignore");
     this->switch_branch(branch_ignore, ":", false);
-    
+
     static const int nbins = 20;
     this->h_of_order_of_velems
         = new TH1D( "h_of_order_of_velems", "", nbins, -0.5, nbins-0.5 );
 
     auto status = this->read_all_branch();
     if ( status != anl::ANL_OK ) return anl::ANL_NG;
-    
+
     bnk::define<long>( "ReadTTree_entry" );
     bnk::put<long>( "ReadTTree_entry", -1 );
 
@@ -106,25 +106,25 @@ int ReadTTree::mod_ana()
 
     for ( auto key : list_of_string_brances )
 	bnk::put<std::string>( key, string_to_reset );
-	
+
     input_tree->GetEntry( tree_entry );
-    
+
     // cout << bnk::get<std::string>("proc_name") << endl;
     bnk::put<long>( "ReadTTree_entry", tree_entry ); return anl::ANL_OK;
-    
-    // return 
-    // cout << "eventid=" << tree_entry << endl;        
+
+    // return
+    // cout << "eventid=" << tree_entry << endl;
     // cout << "get entry is OK" << endl;
 
     //auto livetime = bnk::get<unsigned int>("livetime");
     //cout << livetime  << endl;
     // auto ev =  bnk::getv<double>("edep");
     // cout << "e=";
-    // if ( ev.size() != 0 ) 
+    // if ( ev.size() != 0 )
     // 	for ( auto e : ev ) cout << e << ", ";
     // cout << endl;
     // cout << "end" << endl;
-    
+
     // auto px = bnk::getv<double>("pos_x");
     // cout << "x=";
     // // //for ( auto x : *pos_x ) cout << x << ", ";
@@ -138,24 +138,24 @@ int ReadTTree::mod_ana()
     // cout << "bnk getv y=";
     // for ( auto y : py ) cout << y << ", ";
     // cout << endl;
-            
+
     // auto pz = bnk::getv<double>("pos_z", 0, 1);
     // cout << "z=";
     // for ( auto z : *pos_z ) cout << z << ", ";
     // cout << endl;
 
-    
+
     // cout << "e=";
     // for ( auto e : *edep ) cout << e << ", ";
     // cout << endl;
 
     // cout << "size=" << ptrlist_double[0]->size() << endl;
     // for ( auto y : *bnk::getvecptr<double>("pos_y") ) cout << y << ", ";
-    
-    // cout << endl;
-    
 
-    
+    // cout << endl;
+
+
+
     return anl::ANL_OK;
 }
 
@@ -168,8 +168,9 @@ int ReadTTree::mod_endrun()
     auto inname = input_file->GetName();
     input_file->Close();
 
-    cout << inname << " is closed." << endl;
-    
+    cout << " - Closed : " << inname << endl;
+    cout << " - End : ReadTTree" << endl;
+
     return anl::ANL_OK;
 }
 
@@ -185,36 +186,37 @@ int ReadTTree::switch_branch(const std::string& selection, const std::string& de
     }
 
     input_tree->SetBranchStatus( "*", !enable );
-    
-    for ( auto branch : selected_branch ) 
+
+    for ( auto branch : selected_branch )
 	input_tree->SetBranchStatus( branch.c_str(), enable );
-    
+
     return anl::ANL_OK;
 }
 int ReadTTree::read_all_branch()
 {
     auto list_of_leaves = input_tree->GetListOfLeaves();
-    auto nleaves = list_of_leaves->GetEntries();   
+    auto nleaves = list_of_leaves->GetEntries();
 
+    cout << endl;
     cout << "## Branch List of " << input_tree->GetName() << " ##" << endl;
-    
+
     auto line = std::string(62, '-');
     cout << line << endl;
     cout << setw(25) << "Type" << " " << setw(25) << "Key" << " " << setw(10) << endl;
     cout << line << endl;
-    
+
     for ( int i=0; i<nleaves; ++i ) {
         auto leaf = (TLeaf*)list_of_leaves->At(i);
         if ( !leaf->InheritsFrom("TLeaf") ) return anl::ANL_NG;
 	if ( !input_tree->GetBranchStatus( leaf->GetName() ) ) continue;
-	
-	auto key        = (std::string)leaf->GetName();	
+
+	auto key        = (std::string)leaf->GetName();
 	auto typestring = (std::string)leaf->GetTypeName();
 	auto maxsize    = get_maxsize( leaf );
 	auto leafcount  = get_leafcount( leaf );
 
 	auto status     = anl::ANL_OK;
-	
+
 	if ( typestring == "Int_t" ) {
 	    status = read_branch<int>( key, maxsize, leafcount );
 	    print_branch_info(key, "int", maxsize);
@@ -242,7 +244,7 @@ int ReadTTree::read_all_branch()
 	else if ( typestring == "Long_t" ) {
 	    status = read_branch<long>( key, maxsize, leafcount );
 	    print_branch_info(key, "long", maxsize);
-	}	
+	}
 	else if ( typestring == "Long64_t" ) {
 	    status = read_branch<long long>( key, maxsize, leafcount );
 	    print_branch_info(key, "long long", maxsize);
@@ -250,7 +252,7 @@ int ReadTTree::read_all_branch()
 	else if ( typestring == "Char_t" ) {
 	    bnk::define<std::string>(key);
 	    bnk::put<std::string>( key, string_to_reset );
-	    
+
 	    if( !input_tree->FindBranch(key.c_str()) ) {
 		status = anl::ANL_NG; continue;
 	    }
@@ -271,8 +273,8 @@ int ReadTTree::read_all_branch()
 	else if ( typestring == "vector<double>" ) {
 	    status = read_vdouble_branch( key );
 	    // print_branch_info(key, "std::vector<double>", maxsize);
-	}	
-	
+	}
+
 	if ( status != anl::ANL_OK ) return anl::ANL_NG;
     }
     cout << line << endl;
@@ -282,20 +284,20 @@ int ReadTTree::read_all_branch()
 
     for ( auto&& [ key, ptr ] : vptr_list_float )
 	input_tree->SetBranchAddress( key.c_str(), &(ptr) );
-    
+
     for ( auto&& [ key, ptr ] : vptr_list_double )
 	input_tree->SetBranchAddress( key.c_str(), &(ptr) );
-    
+
     // int n = ptrlist_double.size();
     // for ( int i=0; i<n; ++i ) {
     // 	input_tree->SetBranchAddress( strlist_double[i].c_str(), &(ptrlist_double[i]) );
     // }
-    
+
     // auto status = bnk::define<double>("pos_x", 32);
     // status = bnk::define<double>("pos_y", 32);
     // ptrlist_double.emplace_back( bnk::getvecptr<double>("pos_x") );
     // ptrlist_double.emplace_back( bnk::getvecptr<double>("pos_y") );
-    // input_tree->SetBranchAddress	
+    // input_tree->SetBranchAddress
     // 	( "pos_x", &( ptrlist_double.at(0) ) );
     // //	( "pos_x", &( ptrlist_double.at(ptrlist_double.size()-1) ) );
     // //input_tree->SetBranchAddress( "pos_x", &pos_x );
@@ -303,7 +305,7 @@ int ReadTTree::read_all_branch()
     // input_tree->SetBranchAddress
     // 	( "pos_y", &( ptrlist_double.at(1) ) );
     // //( "pos_y", &( ptrlist_double.at(ptrlist_double.size()-1) ) );
-    // //input_tree->SetBranchAddress( "pos_y", &pos_y );    
+    // //input_tree->SetBranchAddress( "pos_y", &pos_y );
 
     cout << endl;
     return anl::ANL_OK;
@@ -333,13 +335,13 @@ std::string ReadTTree::get_leafcount(TLeaf* leaf)
 int ReadTTree::read_vint_branch(const std::string& key)
 {
     if( !input_tree->FindBranch(key.c_str()) ) return anl::ANL_NG;
-    
+
     auto status = bnk::define<int>(key);
     if ( status != anl::ANL_OK ) return anl::ANL_NG;
     vptr_list_int[ key ] = bnk::getvecptr<int>(key);
     bnk::setkeytosize<int>( key, "std::vector" );
-    
-    this->input_tree->Draw( 
+
+    this->input_tree->Draw(
         (TString)"log10("+key+"@.size())>>h_of_order_of_velems"
         );
     auto maxx = this->get_maximum_bin_center(
@@ -354,13 +356,13 @@ int ReadTTree::read_vint_branch(const std::string& key)
 int ReadTTree::read_vfloat_branch(const std::string& key)
 {
     if( !input_tree->FindBranch(key.c_str()) ) return anl::ANL_NG;
-    
+
     auto status = bnk::define<float>(key);
     if ( status != anl::ANL_OK ) return anl::ANL_NG;
     vptr_list_float[ key ] = bnk::getvecptr<float>(key);
     bnk::setkeytosize<float>( key, "std::vector" );
 
-    this->input_tree->Draw( 
+    this->input_tree->Draw(
         (TString)"log10("+key+"@.size())>>h_of_order_of_velems"
         );
     auto maxx = this->get_maximum_bin_center(
@@ -376,13 +378,13 @@ int ReadTTree::read_vfloat_branch(const std::string& key)
 int ReadTTree::read_vdouble_branch(const std::string& key)
 {
     if( !input_tree->FindBranch(key.c_str()) ) return anl::ANL_NG;
-    
+
     auto status = bnk::define<double>(key);
     if ( status != anl::ANL_OK ) return anl::ANL_NG;
     vptr_list_double[ key ] = bnk::getvecptr<double>(key);
     bnk::setkeytosize<double>( key, "std::vector" );
 
-    this->input_tree->Draw( 
+    this->input_tree->Draw(
         (TString)"log10("+key+"@.size())>>h_of_order_of_velems"
         );
     auto maxx = this->get_maximum_bin_center(

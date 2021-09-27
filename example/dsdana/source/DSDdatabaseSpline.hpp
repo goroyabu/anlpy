@@ -17,11 +17,12 @@ public:
     ~DSDdatabaseSpline();
 
     int mod_bgnrun() override;
+    int mod_endrun() override;
 
     float GetEPI(const int stripid, const float pha) override;
 
 private:
-    std::map<int, TSpline3*> gain_curve_spline3;    
+    std::map<int, TSpline3*> gain_curve_spline3;
 };
 
 #endif
