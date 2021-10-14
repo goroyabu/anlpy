@@ -14,6 +14,7 @@
 #include "PETimager.hpp"
 
 #include "ProjectConeETCC.hpp"
+#include "FilterComptree.hpp"
 
 #include <pybind11/pybind11.h>
 
@@ -109,6 +110,18 @@ PYBIND11_MODULE(ccana, m) {
 	.def("DefineParameter", &ProjectConeETCC::define_parameter<bool>)
 	.def("DefineParameter", &ProjectConeETCC::define_parameter<std::string>)
 	.def("ShowParameter", &ProjectConeETCC::show_parameters);
+
+    pybind11::class_<FilterComptree, anl::VANL_Module>(m, "FilterComptree")
+        .def(pybind11::init<>())
+        .def("SetParameter", &FilterComptree::set_parameter<int>)
+        .def("SetParameter", &FilterComptree::set_parameter<double>)
+        .def("SetParameter", &FilterComptree::set_parameter<bool>)
+        .def("SetParameter", &FilterComptree::set_parameter<std::string>)
+        .def("DefineParameter", &FilterComptree::define_parameter<int>)
+        .def("DefineParameter", &FilterComptree::define_parameter<double>)
+        .def("DefineParameter", &FilterComptree::define_parameter<bool>)
+        .def("DefineParameter", &FilterComptree::define_parameter<std::string>)
+        .def("ShowParameter", &FilterComptree::show_parameters);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;

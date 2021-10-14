@@ -511,6 +511,15 @@ int ProjectConeETCC::DefineBranch(TTree* tree)
     tree->Branch( "sum_epi_forward_init",
         &sum_epi_forward_init, "sum_epi_forward_init/F");
 
+    vector_incident.resize(3);
+    vector_photon.resize(3);
+    vector_electron.resize(3);
+    tree->Branch( "vector_incident", vector_incident.data(), "vector_incident[3]/F" );
+    tree->Branch( "vector_photon", vector_photon.data(), "vector_photon[3]/F" );
+    tree->Branch( "vector_electron", vector_electron.data(), "vector_electron[3]/F" );
+    tree->Branch( "angle_electron_on_plane", &angle_electron_on_plane, "angle_electron_on_plane/F" );
+    tree->Branch( "angle_electron_vertical", &angle_electron_vertical, "angle_electron_vertical/F" );
+
     // if ( event.ExistBranch("coin_eventid") )
     //     output_tree->Branch( "coin_eventid", &event.coin_eventid, "coin_eventid/L" );
     //
@@ -603,7 +612,7 @@ void ProjectConeETCC::CalcComptonEvent(const Hit& si, const Hit& cdte)
     auto vec_norm_vertical = TVector3( 0, 1, 0 );
     auto scat  = si.Postion();
     auto abso  = cdte.Postion();
-    auto vec_cone_axis = scat - abso;
+    auto vec_cone_axis = (scat - abso).Unit();
     auto angle_theta_rad = this->ComptonTheta( si.Energy(), cdte.Energy() );
     auto angle_phi_rad = TVector2::Phi_mpi_pi( si.Phi() + TMath::Pi()*0.5 );
     this->theta_kine = angle_theta_rad;
@@ -611,7 +620,8 @@ void ProjectConeETCC::CalcComptonEvent(const Hit& si, const Hit& cdte)
 
     auto vec_norm_z = TVector3( 0, 0, -1 );
     auto source_to_scat = scat - this->source_position;
-    auto vec_norm_inci = source_to_scat; vec_norm_inci.Unit();
+    auto vec_norm_inci = source_to_scat;
+    vec_norm_inci = vec_norm_inci.Unit();
     auto scat_to_abso = abso - scat;
     auto angle_theta_rad_geom = source_to_scat.Angle(scat_to_abso);
     auto arm = (angle_theta_rad - angle_theta_rad_geom)/TMath::Pi()*180.0;
@@ -622,6 +632,20 @@ void ProjectConeETCC::CalcComptonEvent(const Hit& si, const Hit& cdte)
     );
     this->theta_geom = angle_theta_rad_geom;
     this->angle_inci = vec_norm_inci.Angle( vec_norm_z );
+
+    this->vector_incident[0] = vec_norm_inci.X();
+    this->vector_incident[1] = vec_norm_inci.Y();
+    this->vector_incident[2] = vec_norm_inci.Z();
+    this->vector_photon[0] = vec_cone_axis.X();
+    this->vector_photon[1] = vec_cone_axis.Y();
+    this->vector_photon[2] = vec_cone_axis.Z();
+    auto vec_norm_elec = this->ElectronVector( vec_norm_inci, vec_cone_axis, si.Energy(), cdte.Energy() );
+    this->vector_electron[0] = vec_norm_elec.X();
+    this->vector_electron[1] = vec_norm_elec.Y();
+    this->vector_electron[2] = vec_norm_elec.Z();
+    auto [ alpha, beta ] = this->VectorToAlphaBeta( vec_norm_elec );
+    this->angle_electron_on_plane = alpha;
+    this->angle_electron_vertical = beta;
 
     auto vec_axis_to_src_plane = vec_cone_axis.Unit();
     vec_axis_to_src_plane *= this->source_position.Z() - scat.Z();

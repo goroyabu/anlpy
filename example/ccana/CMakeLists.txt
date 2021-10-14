@@ -8,7 +8,7 @@ set(
     source/Extract2Photon.cpp source/ProjectCone3D.cpp
     source/Project2Photon3D.cpp source/IterateCone3D.cpp
     source/Iterate2Photon3D.cpp source/PETimager.cpp
-    source/ProjectConeETCC.cpp
+    source/ProjectConeETCC.cpp source/FilterComptree.cpp
 )
 
 # ----- CMake & Compiler ----- #

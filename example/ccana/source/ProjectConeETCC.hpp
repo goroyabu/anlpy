@@ -186,6 +186,12 @@ class ProjectConeETCC : public anl::VANL_Module
         float sum_epi_around_init;
         float sum_epi_forward_init;
 
+        std::vector<float> vector_incident;
+        std::vector<float> vector_photon;
+        std::vector<float> vector_electron;
+        float angle_electron_on_plane;
+        float angle_electron_vertical;
+
         /* for CMOS energy correction */
         TH1D * param2_cdtez;
         TF1 * si_ee_lo;
@@ -297,6 +303,31 @@ class ProjectConeETCC : public anl::VANL_Module
                 vec.Z() <= image->GetZaxis()->GetXmax();
 
             return z;
+        }
+        inline static TVector3 ElectronVector(TVector3 norm_inci, TVector3 norm_photon, const double e_electron, const double e_photon)
+        {
+            static const double mass_of_electron = 511.0;
+            double val = TMath::Sqrt( e_electron * (e_electron+2*mass_of_electron));
+            norm_inci  *= (e_electron+e_photon)/val;
+            norm_photon *= e_photon/val;
+            return norm_inci + norm_photon;
+        }
+        inline static std::tuple<double,double> VectorToAlphaBeta(const TVector3& vec)
+        {
+            auto x = vec.X(); auto y = vec.Y(); auto z = vec.Z();
+
+            auto alpha_norm = TMath::Sqrt( x*x + y*y );
+            auto alpha_x = x/alpha_norm; auto alpha_y = y/alpha_norm;
+            auto alpha = TVector2::Phi_mpi_pi( TMath::ACos(alpha_x) );
+            if ( alpha_y < 0.0 ) alpha *= -1.0;
+            alpha = TVector2::Phi_mpi_pi( alpha + TMath::Pi() * 0.5 );
+
+            auto beta_norm = TMath::Sqrt( x*x + y*y + z*z );
+            auto beta_z = z/beta_norm;
+            auto beta = TMath::ASin(beta_z);
+            if ( beta_z < 0.0 ) beta *= -1.0;
+
+            return std::make_tuple(alpha, beta);
         }
 };
 
