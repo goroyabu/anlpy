@@ -9,6 +9,7 @@ set(
     source/Project2Photon3D.cpp source/IterateCone3D.cpp
     source/Iterate2Photon3D.cpp source/PETimager.cpp
     source/ProjectConeETCC.cpp source/FilterComptree.cpp
+    source/ProjectComptree.cpp
 )
 
 # ----- CMake & Compiler ----- #

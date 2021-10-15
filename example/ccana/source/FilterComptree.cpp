@@ -17,7 +17,7 @@ using std::endl;
 #include <TSeqCollection.h>
 
 FilterComptree::FilterComptree()
-    : anl::VANL_Module("FilterComptree", "20211014"),
+    : anl::VANL_Module("FilterComptree", "20211015"),
     input_file(nullptr),
     input_tree(nullptr),
     output_file(nullptr),
@@ -48,6 +48,14 @@ FilterComptree::FilterComptree()
 
 FilterComptree::~FilterComptree()
 {
+    if ( this->output_file->IsOpen() ) {
+        this->output_file->Close();
+        cout << " - Closed : " << this->get_parameter<std::string>("output_file") << endl;
+    }
+    if ( this->input_file->IsOpen() ) {
+        this->input_file->Close();
+        cout << " - Closed : " << this->get_parameter<std::string>("input_file") << endl;
+    }
 }
 
 int FilterComptree::mod_bgnrun()
@@ -119,6 +127,24 @@ int FilterComptree::mod_bgnrun()
     evs::define("Eigen_Value_Is_Over_Threshold");
     evs::define("Pixel_Ratio_Is_Over_Threshold");
 
+    // ### DEFINE BNK ###
+    bnk::define<int>( "num_hits" );
+    bnk::define<double>( "hit1_energy" );
+    bnk::define<double>( "hit1_posx" );
+    bnk::define<double>( "hit1_posy" );
+    bnk::define<double>( "hit1_posz" );
+    bnk::define<double>( "hit2_energy" );
+    bnk::define<double>( "hit2_posx" );
+    bnk::define<double>( "hit2_posy" );
+    bnk::define<double>( "hit2_posz" );
+    bnk::define<double>( "totalenergy" );
+    bnk::define<double>( "theta_kine" );
+    bnk::define<double>( "theta_geom" );
+    bnk::define<double>( "phi_esti" );
+    bnk::define<double>( "phi_geom" );
+    bnk::define<double>( "arm" );
+    bnk::define<double>( "spd" );
+
     // ### ANALYSIS PARAMETERS ###
     cout << endl;
     this->enable_reject_fluor = get_parameter<int>("enable_reject_fluor");
@@ -149,6 +175,7 @@ int FilterComptree::mod_bgnrun()
     cout << " - Threshold for Eigen value ratio : " << this->eigen_ratio_threshold << endl;
     cout << " - Threshold for Pixel value ratio : " << this->pixel_ratio_threshold << endl;
 
+    cout << endl;
     return anl::ANL_OK;
 }
 
@@ -191,6 +218,17 @@ int FilterComptree::mod_ana()
     this->hit2_posz = cdte.Postion().Z();
     this->totalenergy = energy_sum;
 
+    bnk::put<int>( "num_hits", this->num_hits );
+    bnk::put<double>( "hit1_energy", this->hit1_energy );
+    bnk::put<double>( "hit1_posx", this->hit1_posx );
+    bnk::put<double>( "hit1_posy", this->hit1_posy );
+    bnk::put<double>( "hit1_posz", this->hit1_posz );
+    bnk::put<double>( "hit2_energy", this->hit2_energy );
+    bnk::put<double>( "hit2_posx", this->hit2_posx );
+    bnk::put<double>( "hit2_posy", this->hit2_posy );
+    bnk::put<double>( "hit2_posz", this->hit2_posz );
+    bnk::put<double>( "totalenergy", this->totalenergy );
+
     auto vec_norm_vertical = TVector3( 0, 1, 0 );
     auto scat  = si.Postion();
     auto abso  = cdte.Postion();
@@ -209,6 +247,9 @@ int FilterComptree::mod_ana()
     auto arm = (angle_theta_rad - angle_theta_rad_geom)/TMath::Pi()*180.0;
     this->theta_geom = angle_theta_rad_geom;
     this->angle_inci = vec_norm_inci.Angle( vec_norm_z );
+    bnk::put<double>( "theta_kine", this->theta_kine );
+    bnk::put<double>( "theta_geom", this->theta_geom );
+    bnk::put<double>( "arm", arm );
 
     this->vector_incident[0] = vec_norm_inci.X();
     this->vector_incident[1] = vec_norm_inci.Y();
@@ -231,6 +272,9 @@ int FilterComptree::mod_ana()
     auto angle_phi_rad_geom = TVector2::Phi_mpi_pi( vec_phi_on_src_plane.DeltaPhi( vec_norm_vertical ) );
     auto spd = (angle_phi_rad - angle_phi_rad_geom)/TMath::Pi()*180;
     this->phi_geom = angle_phi_rad_geom;
+    bnk::put<double>( "phi_esti", this->phi_esti );
+    bnk::put<double>( "phi_geom", this->phi_geom );
+    bnk::put<double>( "spd", spd );
 
     this->beta_vs_alpha_angle_electron->Fill(
         this->angle_electron_on_plane/TMath::Pi()*180.0,
@@ -292,10 +336,10 @@ int FilterComptree::mod_endrun()
     this->beta_vs_alpha_angle_electron->Write();
     this->angle_distribution_electron->Write();
 
-    this->output_file->Close();
-    cout << " - Closed : " << this->get_parameter<std::string>("output_file") << endl;
-    this->input_file->Close();
-    cout << " - Closed : " << this->get_parameter<std::string>("input_file") << endl;
+    // this->output_file->Close();
+    // cout << " - Closed : " << this->get_parameter<std::string>("output_file") << endl;
+    // this->input_file->Close();
+    // cout << " - Closed : " << this->get_parameter<std::string>("input_file") << endl;
 
     return anl::ANL_OK;
 }
