@@ -62,7 +62,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='dsdana',
-    version='20210927',
+    version='20211015',
     author='Goro Yabu',
     author_email='',
     description='',

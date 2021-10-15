@@ -22,7 +22,7 @@ using std::endl;
 // const int MergeAdjacent::materialid_cdte = 1;
 
 MergeAdjacent::MergeAdjacent()
-    : VANL_Module("MergeAdjacent", "20210927"),
+    : VANL_Module("MergeAdjacent", "20211015"),
       mDatabase(nullptr), m_histogram(nullptr)
 {
     m_ndetector = 1;
@@ -54,28 +54,28 @@ int MergeAdjacent::mod_bgnrun()
     static const double xmax_h2 = nbins_h2-0.5;
 
     for ( auto detid : m_detid_list ) {
-	TString hname = Form("h2_multi_lv1_det%02d", detid);
-	TString htitle = Form("Signals before Ecut on det %02d;N of X-signals;N of Y-signals", detid);
-	auto h2 = new TH2D( hname, htitle, nbins_h2, xmin_h2, xmax_h2,
-			    nbins_h2, xmin_h2, xmax_h2 );
-	list_of_h2_multi_lv1[detid] = h2;
-	nsignal_lv1_on_1det[detid] = std::make_pair(0,0);
+        TString hname = Form("h2_multi_lv1_det%d_lv2", detid);
+        TString htitle = Form("Signals before Ecut on det %d;N of X-signals;N of Y-signals", detid);
+        auto h2 = new TH2D( hname, htitle, nbins_h2, xmin_h2, xmax_h2,
+                    nbins_h2, xmin_h2, xmax_h2 );
+        this->list_of_h2_multi_lv1[detid] = h2;
+        this->nsignal_lv1_on_1det[detid] = std::make_pair(0,0);
     }
 
     for ( auto detid : m_detid_list ) {
-	TString hname = Form("h2_multi_lv2a_det%02d", detid);
-	TString htitle = Form("Signals over Ethr on det %02d;N of X-signals;N of Y-signals", detid);
-	auto h2 = new TH2D( hname, htitle, nbins_h2, xmin_h2, xmax_h2,
-			    nbins_h2, xmin_h2, xmax_h2 );
-	list_of_h2_multi_lv2a[detid] = h2;
+        TString hname = Form("h2_multi_lv2a_det%d", detid);
+        TString htitle = Form("Signals over Ethr on det %d;N of X-signals;N of Y-signals", detid);
+        auto h2 = new TH2D( hname, htitle, nbins_h2, xmin_h2, xmax_h2,
+            nbins_h2, xmin_h2, xmax_h2 );
+        this->list_of_h2_multi_lv2a[detid] = h2;
     }
 
     for ( auto detid : m_detid_list ) {
-	TString hname = Form("h2_multi_lv2b_det%02d", detid);
-	TString htitle = Form("Merged Signals on det %02d;N of merged X-signals;N of Y-signals", detid);
-	auto h2 = new TH2D( hname, htitle, nbins_h2, xmin_h2, xmax_h2,
-			    nbins_h2, xmin_h2, xmax_h2 );
-	list_of_h2_multi_lv2b[detid] = h2;
+        TString hname = Form("h2_multi_lv2b_det%d", detid);
+        TString htitle = Form("Merged Signals on det %d;N of merged X-signals;N of Y-signals", detid);
+        auto h2 = new TH2D( hname, htitle, nbins_h2, xmin_h2, xmax_h2,
+            nbins_h2, xmin_h2, xmax_h2 );
+        this->list_of_h2_multi_lv2b[detid] = h2;
     }
 
     auto status = this->bnkDefAll();
@@ -129,11 +129,13 @@ int MergeAdjacent::mod_endrun()
 {
     // m_multipli_his->Write();
 
-    // if ( !gDirectory->IsWritable() )
-    // 	return anl::ANL_OK;
+    if ( !gDirectory->IsWritable() )
+    	return anl::ANL_OK;
 
     // auto dir = gDirectory->mkdir("his_MergeAdjacent");
     // if ( !dir ) return anl::ANL_OK;
+
+    // m_multipli_his->Write();
 
     // dir->cd();
     // for ( auto mp : list_of_h2_multi_lv1 ) {
@@ -141,20 +143,20 @@ int MergeAdjacent::mod_endrun()
     // 	mp.second->GetYaxis()->SetRangeUser(0, 10);
     // 	mp.second->Write();
     // }
-    // for ( auto mp : list_of_h2_multi_lv2a ) {
-    // 	mp.second->GetXaxis()->SetRangeUser(0, 10);
-    // 	mp.second->GetYaxis()->SetRangeUser(0, 10);
-    // 	mp.second->Write();
-    // }
-    // for ( auto mp : list_of_h2_multi_lv2b ) {
-    // 	mp.second->GetXaxis()->SetRangeUser(0, 10);
-    // 	mp.second->GetYaxis()->SetRangeUser(0, 10);
-    // 	mp.second->Write();
-    // }
+    for ( auto mp : this->list_of_h2_multi_lv2a ) {
+    	mp.second->GetXaxis()->SetRangeUser(0, 10);
+    	mp.second->GetYaxis()->SetRangeUser(0, 10);
+    	mp.second->Write();
+    }
+    for ( auto mp : this->list_of_h2_multi_lv2b ) {
+    	mp.second->GetXaxis()->SetRangeUser(0, 10);
+    	mp.second->GetYaxis()->SetRangeUser(0, 10);
+    	mp.second->Write();
+    }
 
     // dir->cd("..");
 
-    cout << " - End : MergeAdjacent" << endl;
+    // cout << " - End : MergeAdjacent" << endl;
     return anl::ANL_OK;
 }
 int MergeAdjacent::bnkDefAll()

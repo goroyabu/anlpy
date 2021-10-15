@@ -29,10 +29,12 @@ private:
     std::vector<int> m_detid_list;
     TH1D * m_spect;
     TH2D * m_image;
+    std::map<int, TH1D*> list_of_h1_spect;
+    std::map<int, TH2D*> list_of_h2_image;
 
     /* parameter */
     float m_delta_e_threshold;
-    
+
     /* input */
     int m_nsignal_x_lv2;
     int m_nsignal_y_lv2;
@@ -50,7 +52,7 @@ private:
     std::vector<int> m_lv1signal_id_x_lv2;
     std::vector<int> m_lv1signal_id_y_lv2;
     std::vector<int> m_lv2index_x, m_lv2index_y;
-    
+
     /* temp */
     int m_nsignal_x, m_nsignal_y;
     //std::vector<int> m_detid_x, m_detid_y;
@@ -59,7 +61,7 @@ private:
     std::vector<float> m_width_x, m_width_y;
     std::vector<int> m_n_merged_x, m_n_merged_y;
     std::vector<int> m_index_x, m_index_y;
-    
+
     /* output */
     int m_nhit_lv3;
     std::vector<int> m_detid_lv3;
@@ -91,7 +93,7 @@ private:
     void case2and2(int detid);
     void case3over(int detid);
     */
-    
+
     struct signal_data
     {
 	int detid;
@@ -100,7 +102,7 @@ private:
 	signal_data(int _detid) : detid(_detid){}
 	signal_data(const signal_data& org) : detid(org.detid), epi(org.epi), pos(org.pos), width(org.width),
 					n_merged(org.n_merged), index(org.index), sorted_index(org.sorted_index) {}
-	
+
 	signal_data& set_float(float _epi, float _pos, float _width)
 	{
 	    epi = _epi; pos = _pos; width = _width;
@@ -150,27 +152,29 @@ private:
     };
     void push_back_hit(hit_data& data)
     {
-	m_detid_lv3.emplace_back(data.detid);
-	m_epi_lv3.emplace_back(data.epi);
-	m_epi_x_lv3.emplace_back(data.epi_x);
-	m_epi_y_lv3.emplace_back(data.epi_y);
-	m_pos_x_lv3.emplace_back(data.pos_x);
-	m_pos_y_lv3.emplace_back(data.pos_y);
-	m_pos_z_lv3.emplace_back(data.pos_z);
-	m_width_x_lv3.emplace_back(data.width_x);
-	m_width_y_lv3.emplace_back(data.width_y);
-	m_width_z_lv3.emplace_back(data.width_z);
-	m_lv2signal_id_x_lv3.emplace_back(data.lv2_id_x);
-	m_lv2signal_id_y_lv3.emplace_back(data.lv2_id_y);
-	m_nhit_lv3++;
-	m_n_lv2signal_x_lv3++;
-	m_n_lv2signal_y_lv3++;
+        m_detid_lv3.emplace_back(data.detid);
+        m_epi_lv3.emplace_back(data.epi);
+        m_epi_x_lv3.emplace_back(data.epi_x);
+        m_epi_y_lv3.emplace_back(data.epi_y);
+        m_pos_x_lv3.emplace_back(data.pos_x);
+        m_pos_y_lv3.emplace_back(data.pos_y);
+        m_pos_z_lv3.emplace_back(data.pos_z);
+        m_width_x_lv3.emplace_back(data.width_x);
+        m_width_y_lv3.emplace_back(data.width_y);
+        m_width_z_lv3.emplace_back(data.width_z);
+        m_lv2signal_id_x_lv3.emplace_back(data.lv2_id_x);
+        m_lv2signal_id_y_lv3.emplace_back(data.lv2_id_y);
+        m_nhit_lv3++;
+        m_n_lv2signal_x_lv3++;
+        m_n_lv2signal_y_lv3++;
+        this->list_of_h1_spect[data.detid]->Fill(data.epi);
+        this->list_of_h2_image[data.detid]->Fill(data.pos_x,data.pos_y);
     }
-    
+
 public:
     CoupleHit();
     ~CoupleHit(){}
-    
+
     int mod_bgnrun();
     //void mod_his(int &status);
     //void mod_com(int &status);

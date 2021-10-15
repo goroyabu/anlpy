@@ -26,7 +26,7 @@ using std::setw;
 #include <evs.hpp>
 
 WriteTTree::WriteTTree()
-    : anl::VANL_Module("WriteTTree", "20210927")
+    : anl::VANL_Module("WriteTTree", "20211015")
 {
     /** Parameters can be modified via a method 'SetParameter' in Python **/
     // define_parameter<std::string>("input_file", "input.txt");
@@ -36,6 +36,8 @@ WriteTTree::WriteTTree()
 }
 WriteTTree::~WriteTTree()
 {
+    if ( this->output_file->IsOpen() ) output_file->Close();
+    cout << " - Closed : " << this->get_parameter<std::string>("file_name") << endl;
 }
 
 int WriteTTree::mod_bgnrun()
@@ -97,13 +99,13 @@ int WriteTTree::mod_endrun()
     // ifs.close(); // std::ifstream
 
     // cout << "WriteTTree::mod_endrun" << endl;
-    auto outname =  output_file->GetName();
+    // auto outname =  output_file->GetName();
     output_file->cd();
     output_tree->Write();
-    output_file->Close();
-    // cout << "WT end" << endl;
-    cout << " - Closed : " << outname << endl;
-    cout << " - End : WriteTTree" << endl;
+    // output_file->Close();
+    // // cout << "WT end" << endl;
+    // cout << " - Closed : " << outname << endl;
+    // cout << " - End : WriteTTree" << endl;
 
     return anl::ANL_OK;
 }

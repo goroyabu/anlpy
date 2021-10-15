@@ -25,10 +25,10 @@ using std::endl;
 #include "TFile.h"
 
 ApplyDatabase::ApplyDatabase()
-    : VANL_Module("ApplyDatabase", "20210927"),
-      mDatabase(nullptr), mRandom(nullptr)
-      // m_histall(nullptr), m_spectall(nullptr),
-      // m_multi_hist(nullptr)
+    : VANL_Module("ApplyDatabase", "20211015"),
+    mDatabase(nullptr), mRandom(nullptr),
+    m_histall(nullptr), m_spectall(nullptr),
+    m_multi_hist(nullptr)
 {
     m_asic_bgn = 0; m_asic_end = 0;
 }
@@ -63,14 +63,30 @@ int ApplyDatabase::mod_bgnrun()
     cout << " - Found : Module DSDdatabase" << endl;
     // cout << mDatabase->mod_name() << endl;
 
-    auto list_of_detid = mDatabase->GetListOfDetids();
-    for ( auto detid : list_of_detid ) {
-	TString hname = Form("h2_lv1_multi_%02d", detid);
-	TString htitle = Form("Number of signals on %02d detector;X;Y", detid);
-	auto h2 = new TH2D( hname, htitle,
-			    100, -0.5, 99.5, 100, -0.5, 99.5 );
-	list_of_h2_multi[detid] = h2;
+    this->list_of_detid = mDatabase->GetListOfDetids();
+    for ( auto detid : this->list_of_detid ) {
+        TString hname = Form("h2_multi_lv1_det%d", detid);
+        TString htitle = Form("Number of signals on detector %d;X;Y", detid);
+        auto h2 = new TH2D( hname, htitle,
+                    100, -0.5, 99.5, 100, -0.5, 99.5 );
+        list_of_h2_multi[detid] = h2;
     }
+
+    m_histall = new TH2D("histall_lv1", "histall;stripid;pha",
+        mDatabase->GetNstrips(),
+        mDatabase->GetStripidMin()-0.5,
+        mDatabase->GetStripidMax()-0.5,
+        1000, -10.5, 989.5);
+
+    m_spectall = new TH2D("spectall_lv1", "spectall;stripid;epi",
+        mDatabase->GetNstrips(),
+        mDatabase->GetStripidMin()-0.5,
+        mDatabase->GetStripidMax()-0.5,
+        10000, -10, 990);
+
+    m_multi_hist = new TH2D("multipli_lv1",
+        "multiplicity lv1;nsignal_x_lv1;nsignal_y_lv1;",
+        50, -0.5, 49.5, 50, -0.5, 49.5);
 
     m_nasic = mDatabase->GetNasics();
     m_asic_bgn = mDatabase->GetAsicidMin();
@@ -188,28 +204,32 @@ int ApplyDatabase::mod_ana()
 
 	    float epi = mDatabase->GetEPI(stripid, pha+getRandom());
 
-	    // m_histall->Fill(stripid, pha);
-	    // m_spectall->Fill(stripid, epi);
+	    m_histall->Fill(stripid, pha);
+	    m_spectall->Fill(stripid, epi);
 
-	    if ( mDatabase->IsXside(stripid) ) {
-		m_detid_x_lv1.emplace_back(detid);
-		m_stripid_x_lv1.emplace_back(stripid);
-		m_adc_cmn_x_lv1.emplace_back(pha);
-		m_epi_x_lv1.emplace_back(epi);
-		m_nsignal_x_lv1++;
-	    }
-	    else {
-		m_detid_y_lv1.emplace_back(detid);
-		m_stripid_y_lv1.emplace_back(stripid);
-		m_adc_cmn_y_lv1.emplace_back(pha);
-		m_epi_y_lv1.emplace_back(epi);
-		m_nsignal_y_lv1++;
-	    }
+        if ( mDatabase->IsXside(stripid) ) {
+            m_detid_x_lv1.emplace_back(detid);
+            m_stripid_x_lv1.emplace_back(stripid);
+            m_adc_cmn_x_lv1.emplace_back(pha);
+            m_epi_x_lv1.emplace_back(epi);
+            m_nsignal_x_lv1++;
+            list_of_nsignals_x[detid] += 1;
+        }
+        else {
+            m_detid_y_lv1.emplace_back(detid);
+            m_stripid_y_lv1.emplace_back(stripid);
+            m_adc_cmn_y_lv1.emplace_back(pha);
+            m_epi_y_lv1.emplace_back(epi);
+            m_nsignal_y_lv1++;
+            list_of_nsignals_y[detid] += 1;
+        }
 
 	}
     }
 
-    // m_multi_hist->Fill(m_nsignal_x_lv1, m_nsignal_y_lv1);
+    m_multi_hist->Fill(m_nsignal_x_lv1, m_nsignal_y_lv1);
+    for ( auto detid : this->list_of_detid )
+        list_of_h2_multi[detid]->Fill( list_of_nsignals_x[detid], list_of_nsignals_y[detid] );
 
     if(m_nsignal_x_lv1==0 && m_nsignal_y_lv1==0)
     	evs::set("nsignal_x_lv1==0 && nsignal_y_lv1==0");
@@ -243,11 +263,20 @@ int ApplyDatabase::mod_endrun()
 {
     // if ( !gDirectory->InheritsFrom("TFile") )
     // 	return anl::ANL_OK;
-    // m_histall->Write();
-    // m_spectall->Write();
-    // m_multi_hist->Write();
+    if ( !gDirectory->IsWritable() )
+        return anl::ANL_OK;
+
+    this->m_histall->Write();
+    this->m_spectall->Write();
+    this->m_multi_hist->Write();
     // status = anlcross::ANL_OK;
-    cout << " - End : ApplyDatabase" << endl;
+    for ( auto mp : this->list_of_h2_multi ) {
+        mp.second->GetXaxis()->SetRangeUser(0, 10);
+        mp.second->GetYaxis()->SetRangeUser(0, 10);
+        mp.second->Write();
+    }
+
+    // cout << " - End : ApplyDatabase" << endl;
     return anl::ANL_OK;
 }
 // void ApplyDatabase::mod_exit(int &status)
@@ -358,6 +387,11 @@ int ApplyDatabase::clearVectorAll()
     m_nsignal_y_lv1 = 0;      m_detid_y_lv1.clear();
     m_stripid_y_lv1.clear();  m_epi_y_lv1.clear();
     m_adc_cmn_y_lv1.clear();
+
+    for ( auto detid : list_of_detid ) {
+        list_of_nsignals_x[detid] = 0;
+        list_of_nsignals_y[detid] = 0;
+    }
 
     return anl::ANL_OK;
 }

@@ -19,11 +19,12 @@ using std::endl;
 #include <ANLmanager.hpp>
 
 CoupleHit::CoupleHit()
-    : VANL_Module("CoupleHit", "20210927"), mDatabase(nullptr),
+    : VANL_Module("CoupleHit", "20211015"), mDatabase(nullptr),
       m_spect(nullptr), m_image(nullptr)
 {
     m_delta_e_threshold = 5.0;
 }
+
 int CoupleHit::mod_bgnrun()
 {
     // using namespace evs;
@@ -39,6 +40,18 @@ int CoupleHit::mod_bgnrun()
     }
     //mDatabase->GetDetIDList(&m_detid_list);
     m_detid_list = mDatabase->GetListOfDetids();
+    for ( auto detid : this->m_detid_list ) {
+        TString hname = Form("h2_image_lv3_det%d", detid);
+        TString htitle = Form("detector image of det%d;X(pos_x_lv3,mm);Y(pos_y_lv3,mm)", detid);
+        auto h2 = new TH2D( hname, htitle,
+                    128, -16, 16, 128, -16, 16 );
+        this->list_of_h2_image[detid] = h2;
+
+        hname = Form("h1_spect_lv3_det%d", detid);
+        htitle = Form("spectrum of det%d;epi_lv3(keV)",detid);
+        auto h1 = new TH1D( hname, htitle, 2000, -10.5, 1000.0-10.5 );
+        this->list_of_h1_spect[detid] = h1;
+    }
 
     auto status = this->bnkDefAll();
     if ( status!=anl::ANL_OK ) return status;
@@ -48,8 +61,8 @@ int CoupleHit::mod_bgnrun()
     evs::define("nhit_lv3==3");
     evs::define("nhit_lv3>=4");
 
-    m_spect = new TH1D("spect_lv3", "spect;epi_lv3", 1000, -10.25, 489.25);
-    m_image = new TH2D("image_lv3", "image;pos_x_lv3;pos_y_lv3", 128, -16, 16, 128, -16, 16);
+    this->m_spect = new TH1D("spect_lv3", "spect;epi_lv3", 2000, -10.5, 1000.0-10.5);
+    this->m_image = new TH2D("image_lv3", "image;pos_x_lv3;pos_y_lv3", 128, -16, 16, 128, -16, 16);
 
     return anl::ANL_OK;
     //std::cout << std::endl;
@@ -87,7 +100,14 @@ int CoupleHit::mod_endrun()
     // 	m_image->Write();
     // }
     //status = ANL_OK;
-    cout << " - End : CoupleHit" << endl;
+    // cout << " - End : CoupleHit" << endl;
+
+    if ( !gDirectory->IsWritable() )
+        return anl::ANL_OK;
+
+    for ( auto mp : this->list_of_h1_spect ) mp.second->Write();
+    for ( auto mp : this->list_of_h2_image ) mp.second->Write();
+
     return anl::ANL_OK;
 }
 // void CoupleHit::mod_exit(int &status)

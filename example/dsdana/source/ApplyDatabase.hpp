@@ -31,12 +31,14 @@ class ApplyDatabase : public anl::VANL_Module
 private:
     DSDdatabase * mDatabase;
     TRandom3 * mRandom;
-    // TH2D * m_histall;
-    // TH2D * m_spectall;
-    // TH2D * m_multi_hist;
+    TH2D * m_histall;
+    TH2D * m_spectall;
+    TH2D * m_multi_hist;
 
+    std::vector<int> list_of_detid;
     std::map<int, TH2D*> list_of_h2_multi;
-    
+    std::map<int, int> list_of_nsignals_x, list_of_nsignals_y;
+
     /* input */
     int m_nasic;
     int m_asic_bgn, m_asic_end;
