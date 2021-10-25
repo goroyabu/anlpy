@@ -108,6 +108,8 @@ int ProjectComptree::mod_bgnrun()
     auto z_min   = get_parameter<double>("zaxis_minimum");
     auto z_max   = get_parameter<double>("zaxis_maximum");
 
+    this->is_used_polar_coordinate = get_parameter<int>("use_polar_coordinate");
+
     if ( this->is_used_polar_coordinate == false ) {
         this->image = new TH3F(
             (TString)"response"+copyid.c_str(),
