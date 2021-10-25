@@ -19,7 +19,7 @@ using std::endl;
 #include <TCanvas.h>
 
 ProjectComptree::ProjectComptree()
-    : anl::VANL_Module("ProjectComptree", "20211015"),
+    : anl::VANL_Module("ProjectComptree", "20211025b"),
     output_file(nullptr),
     output_tree(nullptr),
     image(nullptr),
@@ -50,6 +50,8 @@ ProjectComptree::ProjectComptree()
     define_parameter<int>("zaxis_nbins", 40);
     define_parameter<double>("zaxis_minimum", -10.0);
     define_parameter<double>("zaxis_maximum", 10.0);
+
+    define_parameter<int>("use_polar_coordinate", false);
 }
 ProjectComptree::~ProjectComptree()
 {
@@ -106,24 +108,38 @@ int ProjectComptree::mod_bgnrun()
     auto z_min   = get_parameter<double>("zaxis_minimum");
     auto z_max   = get_parameter<double>("zaxis_maximum");
 
-    // if ( !is_event_list_only ) {
-    this->image = new TH3F(
-        (TString)"response"+copyid.c_str(),
-        "response;X(mm);Y(mm);Z(mm)",
-        x_nbins, x_min, x_max,
-        y_nbins, y_min, y_max,
-        z_nbins, z_min, z_max );
+    if ( this->is_used_polar_coordinate == false ) {
+        this->image = new TH3F(
+            (TString)"response"+copyid.c_str(),
+            "response;X(mm);Y(mm);Z(mm)",
+            x_nbins, x_min, x_max,
+            y_nbins, y_min, y_max,
+            z_nbins, z_min, z_max );
 
-    this->image_etcc = (TH3F*)this->image->Clone();
-    this->image_etcc->SetNameTitle(
-        (TString)"response_etcc"+copyid.c_str(),
-        "response_etcc;X(mm);Y(mm);Z(mm)"
-    );
+        this->image_etcc = (TH3F*)this->image->Clone();
+        this->image_etcc->SetNameTitle(
+            (TString)"response_etcc"+copyid.c_str(),
+            "response_etcc;X(mm);Y(mm);Z(mm)"
+        );
+    }
+    else {
+        this->image = new TH3F(
+            (TString)"response"+copyid.c_str(),
+            "response as polar coordinate;sin#theta*cos#phi;sin#theta*sin#phi;radius(mm)",
+            x_nbins, -0.5*TMath::Pi(), 0.5* TMath::Pi(),
+            y_nbins, -0.5*TMath::Pi(), 0.5* TMath::Pi(),
+            z_nbins, z_min, z_max );
+
+        this->image_etcc = (TH3F*)this->image->Clone();
+        this->image_etcc->SetNameTitle(
+            (TString)"response_etcc"+copyid.c_str(),
+            "response_etcc as polar coordinate;sin#theta*cos#phi;sin#theta*sin#phi;radius(mm)"
+        );
+    }
 
     this->h1_cone_filling_ratio = new TH1D(
         (TString)"cone_filling_ratio_"+copyid.c_str(),
         "cone_filling_ratio;Z(mm)", z_nbins, z_min, z_max );
-    // }
 
     const static double pixel_pitch = 0.02; //mm
     this->etrack_calc_dedx = new TH2D( "track_image", "etrack",
@@ -333,27 +349,9 @@ bool ProjectComptree::Projection()//const Hit& si, const Hit& cdte)
     auto nvoxels = this->image->GetNcells();
     auto vec_norm_vertical = TVector3( 0, 1, 0 );
 
-    // auto scat  = si.Postion();
-    // auto abso  = cdte.Postion();
-
     auto scat = TVector3( this->hit1_posx, this->hit1_posy, this->hit1_posz );
     auto abso = TVector3( this->hit2_posx, this->hit2_posy, this->hit2_posz );
     auto vec_cone_axis = scat - abso;
-
-    // auto angle_theta_rad = this->ComptonTheta( si.Energy(), cdte.Energy() );
-    // auto angle_phi_rad = TVector2::Phi_mpi_pi( si.Phi() + TMath::Pi()*0.5 );
-
-    // auto source_to_scat = scat - this->source_position;
-    // auto scat_to_abso = abso - scat;
-    // auto angle_theta_rad_geom = source_to_scat.Angle(scat_to_abso);
-    // auto arm = (angle_theta_rad - angle_theta_rad_geom)/TMath::Pi()*180.0;
-
-    // auto vec_axis_to_src_plane = vec_cone_axis.Unit();
-    // vec_axis_to_src_plane *= this->source_position.Z() - scat.Z();
-    // auto pos_axis_on_src_plane = scat + vec_axis_to_src_plane;
-    // auto vec_phi_on_src_plane = this->source_position - pos_axis_on_src_plane;
-    // auto angle_phi_rad_geom = TVector2::Phi_mpi_pi( vec_phi_on_src_plane.DeltaPhi( vec_norm_vertical ) );
-    // auto spd = (angle_phi_rad - angle_phi_rad_geom)/TMath::Pi()*180;
 
     auto angle_theta_rad = this->theta_kine;
     auto angle_theta_rad_geom = this->theta_geom;
@@ -365,7 +363,11 @@ bool ProjectComptree::Projection()//const Hit& si, const Hit& cdte)
     for ( int i=0; i<nvoxels; ++i ) {
         if ( image->IsBinOverflow(i) || image->IsBinUnderflow(i) ) continue;
 
-        TVector3 voxel = VoxelCenter(image, i);
+        auto voxel = TVector3();
+        if ( this->is_used_polar_coordinate )
+            voxel = this->VoxelCenterPolar(image, i);
+        else
+            voxel = this->VoxelCenter(image, i);
 
         auto vec_scat2vox = voxel - scat;
         auto fVecAxisRotateGeneratingline = vec_cone_axis.Cross(vec_scat2vox);
@@ -402,9 +404,7 @@ bool ProjectComptree::Projection()//const Hit& si, const Hit& cdte)
         auto angle_phi_voxel = TVector2::Phi_mpi_pi( vec_phi_axis_to_surface.DeltaPhi( vec_norm_vertical ) );
 
         auto delta_phi = angle_phi_rad - angle_phi_voxel;
-        // cout << delta_phi << "," << si.Phi() << "," << angle_phi << "," << this->arc_length_sigma*3.0 << endl;
         if ( fabs(delta_phi)<this->arc_length_sigma*3 ) {
-            // cout << delta_phi << "," << si.Phi() << "," << angle_phi << endl;
             weight *= TMath::Exp( -0.5* TMath::Power( delta_phi/this->arc_length_sigma, 2 ) );
             image_etcc->SetBinContent( i, image_etcc->GetBinContent(i)+weight );
             ++n_of_filled_voxels;

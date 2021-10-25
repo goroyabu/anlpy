@@ -57,6 +57,7 @@ class ProjectComptree : public anl::VANL_Module
         double distance_index_omega;
         double rotation_around_vertical_rad;
         bool enable_normalize_cone;
+        bool is_used_polar_coordinate;
 
         /* branch */
         /* inherited from eventtree */
@@ -158,6 +159,19 @@ class ProjectComptree : public anl::VANL_Module
             auto y = h->GetYaxis()->GetBinCenter(ybin);
             auto z = h->GetZaxis()->GetBinCenter(zbin);
             return TVector3(x, y, z);
+        }
+        inline static TVector3 VoxelCenterPolar(TH3* h, int bin)
+        {
+            int xbin, ybin, zbin;
+            h->GetBinXYZ( bin, xbin, ybin, zbin );
+            auto x = h->GetXaxis()->GetBinCenter(xbin);
+            auto y = h->GetYaxis()->GetBinCenter(ybin);
+            auto radius = h->GetZaxis()->GetBinCenter(zbin);
+            auto theta = TVector2::Phi_mpi_pi( TMath::Sqrt( x*x + y*y ) );
+            auto x_in_3d = radius * TMath::Sin( theta ) * x / theta;
+            auto y_in_3d = radius * TMath::Sin( theta ) * y / theta;
+            auto z_in_3d = radius * TMath::Cos( theta );
+            return TVector3( x_in_3d, y_in_3d, z_in_3d );
         }
         inline static double GetBinContent(TH1D* h, double x)
         {
