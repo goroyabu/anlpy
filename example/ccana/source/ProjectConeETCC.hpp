@@ -142,6 +142,7 @@ class ProjectConeETCC : public anl::VANL_Module
         bool enable_normalize_cone;
         double eigen_ratio_threshold;
         double pixel_ratio_threshold;
+        bool is_used_polar_coordinate;
 
         TVector3 source_position;
 
@@ -281,6 +282,19 @@ class ProjectConeETCC : public anl::VANL_Module
             auto y = h->GetYaxis()->GetBinCenter(ybin);
             auto z = h->GetZaxis()->GetBinCenter(zbin);
             return TVector3(x, y, z);
+        }
+        inline static TVector3 VoxelCenterPolar(TH3* h, int bin)
+        {
+            int xbin, ybin, zbin;
+            h->GetBinXYZ( bin, xbin, ybin, zbin );
+            auto x = h->GetXaxis()->GetBinCenter(xbin);
+            auto y = h->GetYaxis()->GetBinCenter(ybin);
+            auto radius = h->GetZaxis()->GetBinCenter(zbin);
+            auto theta = TVector2::Phi_mpi_pi( TMath::Sqrt( x*x + y*y ) );
+            auto x_in_3d = radius * TMath::Sin( theta ) * x / theta;
+            auto y_in_3d = radius * TMath::Sin( theta ) * y / theta;
+            auto z_in_3d = radius * TMath::Cos( theta );
+            return TVector3( x_in_3d, y_in_3d, z_in_3d );
         }
         inline static double GetBinContent(TH1D* h, double x)
         {

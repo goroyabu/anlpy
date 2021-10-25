@@ -117,7 +117,7 @@ class FilterComptree : public anl::VANL_Module
         }
         inline bool IsInThetaRange(const double scat, const double abso) const
         {
-            auto theta = ComptonTheta( scat, abso );
+            auto theta = ComptonTheta( scat, abso )/TMath::Pi()*180.0;
             if ( 0<theta && theta<=this->theta_max_degree )
                 return true;
             return false;

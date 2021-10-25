@@ -17,7 +17,7 @@ using std::endl;
 #include <TSeqCollection.h>
 
 FilterComptree::FilterComptree()
-    : anl::VANL_Module("FilterComptree", "20211015"),
+    : anl::VANL_Module("FilterComptree", "20211025"),
     input_file(nullptr),
     input_tree(nullptr),
     output_file(nullptr),
@@ -286,7 +286,7 @@ int FilterComptree::mod_ana()
     );
 
     auto si_energy_on_va = this->event.epi_total;
-    if ( this->si_ee_lo->Eval( si.Energy() < si_energy_on_va )
+    if ( this->si_ee_lo->Eval( si.Energy() ) < si_energy_on_va
         &&  si_energy_on_va < this->si_ee_up->Eval( si.Energy() )) {
         evs::set("E_Consistent_Si_CMOS");
         this->is_consis_si_energy = true;

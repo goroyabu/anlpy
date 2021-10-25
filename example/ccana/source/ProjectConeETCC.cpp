@@ -19,7 +19,7 @@ using std::endl;
 #include <TCanvas.h>
 
 ProjectConeETCC::ProjectConeETCC()
-    : anl::VANL_Module("ProjectConeETCC", "20210927"),
+    : anl::VANL_Module("ProjectConeETCC", "20211025"),
     input_file(nullptr),
     input_tree(nullptr),
     output_file(nullptr),
@@ -70,6 +70,8 @@ ProjectConeETCC::ProjectConeETCC()
 
     define_parameter<double>("eigen_ratio_threshold", 10.0);
     define_parameter<double>("pixel_ratio_threshold", 2.0);
+
+    define_parameter<int>("use_polar_coordinate", false);
 }
 ProjectConeETCC::~ProjectConeETCC()
 {
@@ -142,7 +144,7 @@ int ProjectConeETCC::mod_bgnrun()
     auto z_min   = get_parameter<double>("zaxis_minimum");
     auto z_max   = get_parameter<double>("zaxis_maximum");
 
-    if ( !is_event_list_only ) {
+    if ( this->is_event_list_only!=false && this->is_used_polar_coordinate!=false ) {
         this->image = new TH3F(
             (TString)"response"+copyid.c_str(),
             "response;X(mm);Y(mm);Z(mm)",
@@ -154,6 +156,24 @@ int ProjectConeETCC::mod_bgnrun()
         this->image_etcc->SetNameTitle(
             (TString)"response_etcc"+copyid.c_str(),
             "response_etcc;X(mm);Y(mm);Z(mm)"
+        );
+
+        this->h1_cone_filling_ratio = new TH1D(
+            (TString)"cone_filling_ratio_"+copyid.c_str(),
+            "cone_filling_ratio;Z(mm)", z_nbins, z_min, z_max );
+    }
+    else if ( this->is_event_list_only!=false && this->is_used_polar_coordinate!=true ) {
+        this->image = new TH3F(
+            (TString)"response"+copyid.c_str(),
+            "response as polar coordinate;sin#theta*cos#phi;sin#theta*sin#phi;radius(mm)",
+            x_nbins, -0.5*TMath::Pi(), 0.5* TMath::Pi(),
+            y_nbins, -0.5*TMath::Pi(), 0.5* TMath::Pi(),
+            z_nbins, z_min, z_max );
+
+        this->image_etcc = (TH3F*)this->image->Clone();
+        this->image_etcc->SetNameTitle(
+            (TString)"response_etcc"+copyid.c_str(),
+            "response_etcc as polar coordinate;sin#theta*cos#phi;sin#theta*sin#phi;radius(mm)"
         );
 
         this->h1_cone_filling_ratio = new TH1D(
@@ -380,50 +400,6 @@ int ProjectConeETCC::mod_ana()
     this->hit2_posy = cdte.Postion().Y();
     this->hit2_posz = cdte.Postion().Z();
     this->totalenergy = si.Energy() + cdte.Energy();
-
-    // this->etrack_calc_dedx->Reset();
-    // for ( auto i_pixel=0; i_pixel<this->event.n_pixel; ++i_pixel ) {
-    //     // auto s = this->event.cmos_detx[i_pixel] - this->event.min_cmos_detx;
-    //     this->etrack_calc_dedx->Fill(
-    //         this->event.cmos_detx[i_pixel] - this->event.min_cmos_detx,
-    //         this->event.cmos_dety[i_pixel] - this->event.min_cmos_dety,
-    //         this->event.epi_pixel_value[i_pixel]
-    //     );
-    // }
-    // double init_x = this->event.init_pos_cmos_detx - this->event.min_cmos_detx;
-    // double init_y = this->event.init_pos_cmos_dety - this->event.min_cmos_dety;
-    // double init_z = this->event.init_pos_cmos_detz;
-    // double cos_phi = TMath::Cos(this->event.phi_cmos_det);
-    // double sin_phi = TMath::Sin(this->event.phi_cmos_det);
-    // double end_x = init_x + cos_phi * 0.1;
-    // double end_y = init_y + sin_phi * 0.1;
-
-    // const static auto ndiv_deltax = (int)(20);
-    // const static auto deltax      = (double)(0.02 * 5);
-    // const static auto div_deltax  = (double)(deltax / ndiv_deltax);
-    // auto deltae = 0.0;
-    // auto n_intrack = 0;
-    // for ( auto i=0; i<ndiv_deltax+1; ++i ) {
-    //     auto x = init_x + cos_phi * div_deltax * i;
-    //     auto y = init_y + sin_phi * div_deltax * i;
-    //     auto xbin = this->etrack_calc_dedx->GetXaxis()->FindBin(x);
-    //     auto ybin = this->etrack_calc_dedx->GetYaxis()->FindBin(y);
-    //     auto c = this->etrack_calc_dedx->GetBinContent( xbin, ybin );
-    //     if ( c==0 ) break;
-    //     ++n_intrack;
-    //     deltae += c;
-    // }
-    // deltae /= (double)(n_intrack);
-    // this->de_over_dx = deltae / deltax;
-    // // this->etrack_calc_dedx->SetTitle(
-    // //     Form("x=%4.2f,y=%4.2f,endx=%4.2f,endy=%4.2f,dedx=%4.2f",
-    // //         init_x,init_y,end_x,end_y,de_over_dx)
-    // // );
-
-    // auto angle_theta_rad = this->ComptonTheta( si.Energy(), cdte.Energy() );
-    // auto angle_phi_rad = TVector2::Phi_mpi_pi( si.Phi() + TMath::Pi()*0.5 );
-    // this->theta_kine = angle_theta_rad;
-    // this->phi_esti = angle_phi_rad;
 
     this->CalcComptonEvent( si, cdte );
 
@@ -668,8 +644,6 @@ bool ProjectConeETCC::Projection(const Hit& si, const Hit& cdte)
     this->image->Reset();
     this->image_etcc->Reset();
     auto nvoxels = this->image->GetNcells();
-    // cout << std::scientific << endl;
-    // cout << "Phi=" << si.Phi() << endl;
     auto vec_norm_vertical = TVector3( 0, 1, 0 );
 
     auto scat  = si.Postion();
@@ -677,23 +651,11 @@ bool ProjectConeETCC::Projection(const Hit& si, const Hit& cdte)
     auto vec_cone_axis = scat - abso;
     auto angle_theta_rad = this->ComptonTheta( si.Energy(), cdte.Energy() );
     auto angle_phi_rad = TVector2::Phi_mpi_pi( si.Phi() + TMath::Pi()*0.5 );
-    // if ( TMath::Pi() < angle_phi_rad )
-    //     angle_phi_rad -= 2*TMath::Pi();
-    // else if ( angle_phi_rad < -1*TMath::Pi() )
-    //     angle_phi_rad += 2*TMath::Pi();
-    // this->theta_kine = angle_theta_rad;
-    // this->phi_esti = angle_phi_rad;
 
     auto source_to_scat = scat - this->source_position;
     auto scat_to_abso = abso - scat;
     auto angle_theta_rad_geom = source_to_scat.Angle(scat_to_abso);
     auto arm = (angle_theta_rad - angle_theta_rad_geom)/TMath::Pi()*180.0;
-    // this->h1_arm_distribution->Fill( arm );
-    // this->h2_arm_distribition->Fill(
-    //     angle_theta_rad/TMath::Pi()*180.0,
-    //     angle_theta_rad_geom/TMath::Pi()*180.0
-    // );
-    // this->theta_geom = angle_theta_rad_geom;
 
     auto vec_axis_to_src_plane = vec_cone_axis.Unit();
     vec_axis_to_src_plane *= this->source_position.Z() - scat.Z();
@@ -701,19 +663,17 @@ bool ProjectConeETCC::Projection(const Hit& si, const Hit& cdte)
     auto vec_phi_on_src_plane = this->source_position - pos_axis_on_src_plane;
     auto angle_phi_rad_geom = TVector2::Phi_mpi_pi( vec_phi_on_src_plane.DeltaPhi( vec_norm_vertical ) );
     auto spd = (angle_phi_rad - angle_phi_rad_geom)/TMath::Pi()*180;
-    // this->h1_spd_distribution->Fill( spd );
-    // this->h2_spd_distribition->Fill(
-    //     angle_phi_rad/TMath::Pi()*180.0,
-    //     angle_phi_rad_geom/TMath::Pi()*180.0
-    // );
-    // this->phi_geom = angle_phi_rad_geom;
 
     int n_of_filled_voxels = 0;
 
     for ( int i=0; i<nvoxels; ++i ) {
         if ( image->IsBinOverflow(i) || image->IsBinUnderflow(i) ) continue;
 
-        TVector3 voxel = VoxelCenter(image, i);
+        auto voxel = TVector3();
+        if ( this->is_used_polar_coordinate )
+            voxel = this->VoxelCenterPolar(image, i);
+        else
+            voxel = this->VoxelCenter(image, i);
 
         auto vec_scat2vox = voxel - scat;
         auto fVecAxisRotateGeneratingline = vec_cone_axis.Cross(vec_scat2vox);
@@ -750,9 +710,7 @@ bool ProjectConeETCC::Projection(const Hit& si, const Hit& cdte)
         auto angle_phi_voxel = TVector2::Phi_mpi_pi( vec_phi_axis_to_surface.DeltaPhi( vec_norm_vertical ) );
 
         auto delta_phi = angle_phi_rad - angle_phi_voxel;
-        // cout << delta_phi << "," << si.Phi() << "," << angle_phi << "," << this->arc_length_sigma*3.0 << endl;
         if ( fabs(delta_phi)<this->arc_length_sigma*3 ) {
-            // cout << delta_phi << "," << si.Phi() << "," << angle_phi << endl;
             weight *= TMath::Exp( -0.5* TMath::Power( delta_phi/this->arc_length_sigma, 2 ) );
             image_etcc->SetBinContent( i, image_etcc->GetBinContent(i)+weight );
             ++n_of_filled_voxels;
@@ -778,7 +736,6 @@ TH1D* ProjectConeETCC::GetFillingRatio
 (TH3F* image, const TVector3& scat, const TVector3& abso, double angle_theta_rad)
 {
     auto vec_cone_axis = scat - abso;
-    // auto angle_theta_rad = eval_theta( si.Energy(), cdte.Energy() );
 
     auto vec_genline_origin = vec_cone_axis;
     auto vertical = vec_cone_axis.Cross( TVector3(0,1,0) );
@@ -787,7 +744,6 @@ TH1D* ProjectConeETCC::GetFillingRatio
     static const int nplot = 1000;
     double deltaphi = 2*TMath::Pi()/nplot;
 
-    // auto zaxis = image->GetZaxis();
     this->h1_cone_filling_ratio->Reset();
     auto nbins = this->h1_cone_filling_ratio->GetXaxis()->GetNbins();
 
