@@ -58,6 +58,9 @@ class ProjectComptree : public anl::VANL_Module
         double rotation_around_vertical_rad;
         bool enable_normalize_cone;
         bool is_used_polar_coordinate;
+        bool is_used_tracking_failed_event;
+        bool is_used_cut_by_track_feature;
+        bool is_for_preselected_dataset;
 
         /* branch */
         /* inherited from eventtree */

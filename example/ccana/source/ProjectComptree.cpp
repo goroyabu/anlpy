@@ -19,7 +19,7 @@ using std::endl;
 #include <TCanvas.h>
 
 ProjectComptree::ProjectComptree()
-    : anl::VANL_Module("ProjectComptree", "20211025b"),
+    : anl::VANL_Module("ProjectComptree", "20211118"),
     output_file(nullptr),
     output_tree(nullptr),
     image(nullptr),
@@ -52,6 +52,10 @@ ProjectComptree::ProjectComptree()
     define_parameter<double>("zaxis_maximum", 10.0);
 
     define_parameter<int>("use_polar_coordinate", false);
+    define_parameter<int>("use_tracking_failed_event", false);
+    define_parameter<int>("use_cut_by_track_feature", true);
+
+    define_parameter<int>("for_preselected_dataset", false);
 }
 ProjectComptree::~ProjectComptree()
 {
@@ -109,6 +113,9 @@ int ProjectComptree::mod_bgnrun()
     auto z_max   = get_parameter<double>("zaxis_maximum");
 
     this->is_used_polar_coordinate = get_parameter<int>("use_polar_coordinate");
+    this->is_used_tracking_failed_event = get_parameter<int>("use_tracking_failed_event");
+    this->is_used_cut_by_track_feature = get_parameter<int>("use_cut_by_track_feature");
+    this->is_for_preselected_dataset = get_parameter<int>("for_preselected_dataset");
 
     if ( this->is_used_polar_coordinate == false ) {
         this->image = new TH3F(
@@ -215,10 +222,10 @@ int ProjectComptree::mod_bgnrun()
 
 int ProjectComptree::mod_ana()
 {
-    if ( evs::get("Si_CdTe_2Hits_Event")==false )
+    if ( evs::get("Si_CdTe_2Hits_Event")==false && this->is_for_preselected_dataset==false )
         return anl::ANL_SKIP;
 
-    if ( evs::get("E_Consistent_Si_CMOS")==false )
+    if ( evs::get("E_Consistent_Si_CMOS")==false && this->is_for_preselected_dataset==false )
         return anl::ANL_SKIP;
 
     this->hit1_energy = bnk::get<double>("hit1_energy");
@@ -227,14 +234,14 @@ int ProjectComptree::mod_ana()
     this->h2_energy_hit1_vs_hit2->Fill( hit1_energy, hit2_energy );
     this->h1_totalenergy->Fill( totalenergy );
 
-    if ( evs::get("SC_2hits_In_Theta_Range")==false )
+    if ( evs::get("SC_2hits_In_Theta_Range")==false && this->is_for_preselected_dataset==false )
         return anl::ANL_SKIP;
     else {
         this->h2_energy_hit1_vs_hit2_comp->Fill( hit1_energy, hit2_energy );
         this->h1_totalenergy_comp->Fill( totalenergy );
     }
 
-    if ( evs::get("SC_2hits_In_E_Window")==false )
+    if ( evs::get("SC_2hits_In_E_Window")==false && this->is_for_preselected_dataset==false )
         return anl::ANL_SKIP;
 
     this->theta_kine = bnk::get<double>("theta_kine");
@@ -244,8 +251,13 @@ int ProjectComptree::mod_ana()
     this->h2_arm_distribition->Fill(
         theta_kine*TMath::Pi()*180, theta_geom*TMath::Pi()*180 );
 
-    if ( evs::get("Direction_Is_Reconstruted")==false )
+    if ( evs::get("Direction_Is_Reconstruted")==false
+        && this->is_used_tracking_failed_event==false
+        && this->is_for_preselected_dataset==false )
         return anl::ANL_SKIP;
+
+    if ( this->is_for_preselected_dataset==true && bnk::get<bool>("reconstructed")==true )
+        evs::set("Direction_Is_Reconstruted");
 
     this->phi_esti = bnk::get<double>("phi_esti");
     this->phi_geom = bnk::get<double>("phi_geom");
@@ -255,10 +267,14 @@ int ProjectComptree::mod_ana()
         phi_esti*TMath::Pi()*180, phi_geom*TMath::Pi()*180 );
     this->h2_arm_vs_spd->Fill( spd, arm );
 
-    if ( evs::get("Eigen_Value_Is_Over_Threshold")==false )
+    if ( evs::get("Eigen_Value_Is_Over_Threshold")==false
+        && this->is_used_cut_by_track_feature==true
+        && this->is_for_preselected_dataset==false )
         return anl::ANL_SKIP;
 
-    if ( evs::get("Pixel_Ratio_Is_Over_Threshold")==false )
+    if ( evs::get("Pixel_Ratio_Is_Over_Threshold")==false
+        && this->is_used_cut_by_track_feature==true
+        && this->is_for_preselected_dataset==false )
         return anl::ANL_SKIP;
 
     this->num_hits = bnk::get<int>("num_hits");
@@ -397,6 +413,12 @@ bool ProjectComptree::Projection()//const Hit& si, const Hit& cdte)
 
         if ( weight<=0 ) continue;
         image->SetBinContent( i, image->GetBinContent(i)+weight );
+
+        if ( evs::get("Direction_Is_Reconstruted")==false && this->is_used_tracking_failed_event==true ) {
+            image_etcc->SetBinContent( i, image->GetBinContent(i)+weight );
+            ++n_of_filled_voxels;
+            continue;
+        }
 
         auto vec_axis_projected = TVector3( vec_cone_axis.Unit() );
         double mag_vec_axis_projected = vec_axis_projected.Dot( vec_genline_nearest_to_vox );
