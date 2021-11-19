@@ -21,7 +21,7 @@ using std::endl;
 #include <evs.hpp>
 
 IterateCone3D::IterateCone3D()
-    : anl::VANL_Module("IterateCone3D", "20210914"),
+    : anl::VANL_Module("IterateCone3D", "20211119"),
       input_file(nullptr), input_tree(nullptr), output_file(nullptr), sbp_image(nullptr)
 {
     /** Parameters can be modified via a method 'SetParameter' in Python **/
@@ -188,6 +188,7 @@ int IterateCone3D::mod_ana()
 
         vector3 new_elems = make_vector3( x, y, z, 0.0 );
 
+        event.init_entry();
         while ( event.next() ) {
             ++current_entry;
             if ( eventid>=0 && eventid>current_entry ) continue;
