@@ -70,12 +70,12 @@ public:
 	void set_entry_range(long first, long last)
 	{
 	    if ( last<0 || nentries<last ) last = nentries;
-	    if ( 0<first ) first = 0;
+	    if ( first<0 ) first = 0;
 
 	    if ( first < last ) {
-		first_entry = first;
-		last_entry = last;
-		return;
+            first_entry = first;
+            last_entry = last;
+		    return;
 	    }
 
 	    first_entry = 0;

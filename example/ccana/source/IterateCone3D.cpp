@@ -21,7 +21,7 @@ using std::endl;
 #include <evs.hpp>
 
 IterateCone3D::IterateCone3D()
-    : anl::VANL_Module("IterateCone3D", "20211119b"),
+    : anl::VANL_Module("IterateCone3D", "20211119c"),
       input_file(nullptr), input_tree(nullptr), output_file(nullptr), sbp_image(nullptr)
 {
     /** Parameters can be modified via a method 'SetParameter' in Python **/
