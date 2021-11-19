@@ -152,7 +152,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='ccana',
-    version='20211119',
+    version='20211119b',
     author='Goro Yabu',
     author_email='',
     description='',

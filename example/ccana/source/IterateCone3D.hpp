@@ -80,6 +80,7 @@ public:
 
 	    first_entry = 0;
 	    last_entry = nentries;
+        current_entry = first_entry-1;
 	}
 
 	bool next()

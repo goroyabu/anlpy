@@ -21,7 +21,7 @@ using std::endl;
 #include <evs.hpp>
 
 IterateCone3D::IterateCone3D()
-    : anl::VANL_Module("IterateCone3D", "20211119"),
+    : anl::VANL_Module("IterateCone3D", "20211119b"),
       input_file(nullptr), input_tree(nullptr), output_file(nullptr), sbp_image(nullptr)
 {
     /** Parameters can be modified via a method 'SetParameter' in Python **/
@@ -111,6 +111,7 @@ int IterateCone3D::mod_bgnrun()
     auto first_entry = get_parameter<int>("first_entry");
     auto last_entry = get_parameter<int>("last_entry");
     event.set_entry_range(first_entry, last_entry);
+    cout << " - Entry-range set from " << event.first_entry << " to " << event.last_entry << endl;
 
     index_of_2d_image = get_parameter<int>( "index_of_2d_image" );
     is_enabled_2d_reconstruction = get_parameter<int>( "use_2d_reconstruction" );
